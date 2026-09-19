@@ -1,0 +1,16 @@
+:root {
+  --bg: #16140f;
+  --panel: #201d17;
+  --raised: #2a261e;
+  --border: #2e2a22;
+  --text: #f2ece0;
+  --text-2: #a99f8c;
+  --amber: #e8a93a;
+  --teal: #6fb7a0;
+  --red: #c8412f;
+  --red-2: #e0533f;
+  --font-display: "Bricolage Grotesque Variable", system-ui, sans-serif;
+  --font-ui: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}

@@ -8,11 +8,15 @@ A play-along practice app for guitarists. Load a recording, turn the original gu
 down or out, loop a hard section, slow it down, and record yourself playing the part
 against the rest of the band, so you feel like the guitarist in the band.
 
-**Status: step 2 of 7: loops.** Load a file (or the demo song), see the whole song as a
-waveform, click to seek, play and pause, and loop a section: drag the IN/OUT handles
-(or nudge them with the arrow keys), snap them to bars, or click a section chip. The loop
-wraps sample-accurately with a short crossfade. Stems, speed, recording and export
-are next; see `docs/superpowers/specs/`.
+**Status: step 3a of 7: the band mixer (browser demo).** Load a file (or the demo song),
+see the whole song as a waveform, click to seek, play and pause, and loop a section: drag
+the IN/OUT handles (or nudge them with the arrow keys), snap them to bars, or click a
+section chip. The demo song is a five-part band (guitar, bass, drums, keys, other), and the
+"The band" panel has a fader and mute for each part. The guitar card, YOUR PART, has Mute,
+Quiet guide and Full presets so you can turn the original guitar down or out and play it
+yourself. Gain changes are smoothed over about 10 ms, so they never click. A loaded
+file is a single "Full mix" for now; splitting it into parts needs the local backend, which
+is the next step. Speed, recording and export come after; see `docs/superpowers/specs/`.
 
 ## Develop
 

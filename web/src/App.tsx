@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Engine } from "./audio/engine";
 import { mixToMono } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
-import { DEMO_INFO, DEMO_SECTIONS, synthDemo } from "./data/demo";
+import { DEMO_INFO, DEMO_SECTIONS, synthDemoStems } from "./data/demo";
 import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
 import { loopName, setIn, setOut } from "./lib/loop";
 import type { LoopRange } from "./lib/loop";
@@ -94,7 +94,7 @@ export function App() {
 
   const openFile = (file: File) => open(file.name, async (e) => [{ name: "Full mix", channels: await e.decode(file) }], UNKNOWN);
   const openDemo = () =>
-    open(DEMO_INFO.name, async (e) => [{ name: "Full mix", channels: synthDemo(e.sampleRate) }], {
+    open(DEMO_INFO.name, async (e) => synthDemoStems(e.sampleRate), {
       bpm: DEMO_INFO.bpm,
       timeSig: DEMO_INFO.timeSig,
       key: DEMO_INFO.key,

@@ -51,6 +51,16 @@ export class Engine {
     this.send({ type: "seek", frame: seconds * this.ctx.sampleRate });
   }
 
+  /** Loop between two times in seconds. The worklet wraps sample-accurately. */
+  setLoop(startSec: number, endSec: number): void {
+    const sr = this.ctx.sampleRate;
+    this.send({ type: "loop", start: Math.round(startSec * sr), end: Math.round(endSec * sr) });
+  }
+
+  clearLoop(): void {
+    this.send({ type: "loopOff" });
+  }
+
   private send(cmd: BandCommand, transfer: Transferable[] = []): void {
     this.node?.port.postMessage(cmd, transfer);
   }

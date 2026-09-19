@@ -4,7 +4,9 @@ export type BandCommand =
   | { type: "load"; channels: Float32Array[] }
   | { type: "play" }
   | { type: "pause" }
-  | { type: "seek"; frame: number };
+  | { type: "seek"; frame: number }
+  | { type: "loop"; start: number; end: number }
+  | { type: "loopOff" };
 
 export type BandEvent = { type: "position"; frame: number; playing: boolean };
 
@@ -17,6 +19,8 @@ declare function registerProcessor(name: string, ctor: new () => object): void;
 
 /** Report the position about every 1024 frames (~21 ms at 48 kHz), and on every state change. */
 const REPORT_EVERY = 1024;
+/** Loop-wrap crossfade length, about 8 ms at 48 kHz. */
+const FADE_FRAMES = 384;
 
 class BandProcessor extends AudioWorkletProcessor {
   private transport = new Transport(0);
@@ -30,10 +34,12 @@ class BandProcessor extends AudioWorkletProcessor {
       const msg = e.data;
       if (msg.type === "load") {
         this.src = msg.channels;
-        this.transport = new Transport(msg.channels[0].length);
+        this.transport = new Transport(msg.channels[0].length, FADE_FRAMES);
       } else if (msg.type === "play") this.transport.play();
       else if (msg.type === "pause") this.transport.pause();
       else if (msg.type === "seek") this.transport.seek(msg.frame);
+      else if (msg.type === "loop") this.transport.setLoop(msg.start, msg.end);
+      else if (msg.type === "loopOff") this.transport.clearLoop();
       this.report();
     };
   }

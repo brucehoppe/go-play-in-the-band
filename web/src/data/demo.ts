@@ -1,4 +1,15 @@
+import type { Section } from "../types";
+
 export const DEMO_INFO = { name: "Demo: A minor jam", bpm: 100, timeSig: "4/4", key: "A minor" };
+
+const DEMO_BAR = (60 / 100) * 4;
+
+/** Four 4-bar sections of the 16-bar demo. */
+export const DEMO_SECTIONS: Section[] = ["Intro", "Verse", "Chorus", "Solo"].map((name, i) => ({
+  name,
+  start: i * 4 * DEMO_BAR,
+  end: (i + 1) * 4 * DEMO_BAR,
+}));
 
 const BASS_HZ = [55, 55, 65.41, 49]; // A1 A1 C2 G1, one per bar
 

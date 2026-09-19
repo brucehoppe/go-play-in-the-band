@@ -1,10 +1,14 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Engine } from "./audio/engine";
 import { mixToMono } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
-import { DEMO_INFO, synthDemo } from "./data/demo";
-import type { SongInfo } from "./types";
+import { DEMO_INFO, DEMO_SECTIONS, synthDemo } from "./data/demo";
+import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
+import { loopName, setIn, setOut } from "./lib/loop";
+import type { LoopRange } from "./lib/loop";
+import type { Section, SongInfo } from "./types";
 import { Header } from "./ui/Header";
+import { LoopPanel } from "./ui/LoopPanel";
 import { SongPanel } from "./ui/SongPanel";
 import { TransportBar } from "./ui/TransportBar";
 
@@ -19,6 +23,11 @@ export function App() {
   const [peaks, setPeaks] = useState<Float32Array | null>(null);
   const [position, setPosition] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [loop, setLoop] = useState<LoopRange | null>(null);
+  const [looping, setLooping] = useState(false);
+  const [status, setStatus] = useState("");
+  const monoRef = useRef<Float32Array | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +44,28 @@ export function App() {
     return engineRef.current;
   }
 
-  async function open(name: string, getChannels: (e: Engine) => Promise<Float32Array[]>, meta: Meta) {
+  // Push the loop to the audio thread whenever it changes.
+  useEffect(() => {
+    const e = engineRef.current;
+    if (!e) return;
+    if (loop && looping) e.setLoop(loop.start, loop.end);
+    else e.clearLoop();
+  }, [loop, looping]);
+
+  const bpb = beatsPerBar(song?.timeSig ?? null);
+  const announceLoop = (l: LoopRange) =>
+    setStatus(`Loop set: ${song?.bpm && bpb ? barLabel(l.start, l.end, song.bpm, bpb) : loopName(l, null, null).replace("Loop, ", "")}`);
+  function editLoop(l: LoopRange, announce = true) {
+    setLoop(l);
+    if (announce) announceLoop(l);
+  }
+
+  async function open(
+    name: string,
+    getChannels: (e: Engine) => Promise<Float32Array[]>,
+    meta: Meta,
+    songSections: Section[] = [],
+  ) {
     setBusy(true);
     setError(null);
     try {
@@ -44,9 +74,15 @@ export function App() {
       e.pause();
       const channels = await getChannels(e);
       e.load(channels);
-      const overview = await computePeaks(mixToMono(channels), PEAK_BUCKETS);
+      const mono = mixToMono(channels);
+      monoRef.current = mono;
+      const overview = await computePeaks(mono.slice(), PEAK_BUCKETS);
       setPeaks(overview);
       setSong({ name, duration: channels[0].length / e.sampleRate, ...meta, stemCount: 1 });
+      setSections(songSections);
+      setLoop(null);
+      setLooping(false);
+      setStatus("");
       setPosition(0);
       setPlaying(false);
     } catch (err) {
@@ -62,7 +98,9 @@ export function App() {
       bpm: DEMO_INFO.bpm,
       timeSig: DEMO_INFO.timeSig,
       key: DEMO_INFO.key,
-    });
+    }, DEMO_SECTIONS);
+
+  const defaultLen = () => (song?.bpm && bpb ? (60 / song.bpm) * bpb : 4);
 
   return (
     <div className="app">
@@ -72,8 +110,41 @@ export function App() {
           peaks={peaks}
           duration={song?.duration ?? 0}
           position={position}
+          loop={loop}
+          looping={looping}
+          sections={sections}
           onSeek={(s) => engine().seek(s)}
+          onPickSection={(sec) => {
+            editLoop({ start: sec.start, end: sec.end });
+            engine().seek(sec.start);
+          }}
         />
+        {song && (
+          <LoopPanel
+            duration={song.duration}
+            position={position}
+            loop={loop}
+            looping={looping}
+            bpm={song.bpm}
+            beatsPerBar={bpb}
+            sampleRate={engineRef.current?.sampleRate ?? 48000}
+            getMono={() => monoRef.current}
+            status={status}
+            onLoopChange={editLoop}
+            onToggle={() => {
+              const next = !looping;
+              setLooping(next);
+              setStatus(`Looping ${next ? "on" : "off"}`);
+            }}
+            onSetIn={() => editLoop(setIn(loop, position, song.duration, defaultLen()))}
+            onSetOut={() => editLoop(setOut(loop, position, song.duration, defaultLen()))}
+            onSnap={() => {
+              if (!loop || !song.bpm || !bpb) return;
+              const [start, end] = snapLoopToBars(loop.start, loop.end, song.bpm, bpb, song.duration);
+              editLoop({ start, end });
+            }}
+          />
+        )}
         {busy && <p className="empty" role="status">Reading the recording…</p>}
         {error && <p className="error" role="alert">{error}</p>}
       </main>

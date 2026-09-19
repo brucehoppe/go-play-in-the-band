@@ -6,3 +6,10 @@ export interface SongInfo {
   key: string | null;
   stemCount: number;
 }
+
+/** A named part of a song, in seconds. */
+export interface Section {
+  name: string;
+  start: number;
+  end: number;
+}

@@ -1,37 +1,23 @@
-import { useEffect, useRef } from "react";
-import { drawWaveform } from "../audio/waveform";
+import type { LoopRange } from "../lib/loop";
 import { xToSeconds } from "../lib/time";
+import type { Section } from "../types";
+import { useWaveCanvas } from "./useWaveCanvas";
 
 interface Props {
   peaks: Float32Array | null;
   duration: number;
   position: number;
+  loop: LoopRange | null;
+  looping: boolean;
+  sections: Section[];
   onSeek: (seconds: number) => void;
+  onPickSection: (section: Section) => void;
 }
 
-const AMBER = "#e8a93a";
 const STEP = 5; // seconds per arrow key
 
-export function SongPanel({ peaks, duration, position, onSeek }: Props) {
-  const box = useRef<HTMLDivElement>(null);
-  const canvas = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const el = box.current;
-    const cv = canvas.current;
-    if (!el || !cv || !peaks) return;
-    const draw = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const { width, height } = el.getBoundingClientRect();
-      cv.width = Math.max(1, Math.floor(width * dpr));
-      cv.height = Math.max(1, Math.floor(height * dpr));
-      drawWaveform(cv.getContext("2d")!, peaks, cv.width, cv.height, AMBER);
-    };
-    draw();
-    const ro = new ResizeObserver(draw);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [peaks]);
+export function SongPanel({ peaks, duration, position, loop, looping, sections, onSeek, onPickSection }: Props) {
+  const { box, canvas } = useWaveCanvas(peaks);
 
   if (!peaks) {
     return (
@@ -67,8 +53,29 @@ export function SongPanel({ peaks, duration, position, onSeek }: Props) {
         }}
       >
         <canvas ref={canvas} />
+        {loop && duration > 0 && (
+          <div
+            className={looping ? "loopband on" : "loopband"}
+            style={{ left: `${(loop.start / duration) * 100}%`, width: `${((loop.end - loop.start) / duration) * 100}%` }}
+          />
+        )}
         <div className="playhead" style={{ left: `${pct}%` }} />
       </div>
+      {sections.length > 0 && duration > 0 && (
+        <div className="chips" role="group" aria-label="Song sections">
+          {sections.map((sec) => (
+            <button
+              key={sec.name}
+              className="chip"
+              style={{ flexGrow: sec.end - sec.start }}
+              onClick={() => onPickSection(sec)}
+              aria-label={`Loop ${sec.name}`}
+            >
+              {sec.name}
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

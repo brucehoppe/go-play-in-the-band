@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Engine } from "./audio/engine";
 import { mixToMono } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
-import { DEMO_INFO, DEMO_SECTIONS, synthDemoStems } from "./data/demo";
+import { DEMO_INFO, DEMO_SECTIONS, GUITAR_STEM, synthDemoStems } from "./data/demo";
 import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
 import { loopName, setIn, setOut } from "./lib/loop";
 import type { LoopRange } from "./lib/loop";
 import type { Section, SongInfo, Stem } from "./types";
+import { BandMixer } from "./ui/BandMixer";
 import { Header } from "./ui/Header";
 import { LoopPanel } from "./ui/LoopPanel";
 import { SongPanel } from "./ui/SongPanel";
@@ -27,6 +28,9 @@ export function App() {
   const [loop, setLoop] = useState<LoopRange | null>(null);
   const [looping, setLooping] = useState(false);
   const [status, setStatus] = useState("");
+  const [stemNames, setStemNames] = useState<string[]>([]);
+  const [levels, setLevels] = useState<number[]>([]);
+  const [muted, setMuted] = useState<boolean[]>([]);
   const monoRef = useRef<Float32Array | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +83,9 @@ export function App() {
       const overview = await computePeaks(mono.slice(), PEAK_BUCKETS);
       setPeaks(overview);
       setSong({ name, duration: stems[0].channels[0].length / e.sampleRate, ...meta, stemCount: stems.length });
+      setStemNames(stems.map((s) => s.name));
+      setLevels(stems.map(() => 100));
+      setMuted(stems.map(() => false));
       setSections(songSections);
       setLoop(null);
       setLooping(false);
@@ -100,12 +107,25 @@ export function App() {
       key: DEMO_INFO.key,
     }, DEMO_SECTIONS);
 
+  // Levels live here and reach the audio thread the moment they change.
+  function setLevel(i: number, level: number) {
+    setLevels((prev) => prev.map((v, k) => (k === i ? level : v)));
+    engine().setStemGain(i, level / 100, muted[i] ?? false);
+  }
+  function toggleMute(i: number) {
+    const next = !muted[i];
+    setMuted((prev) => prev.map((v, k) => (k === i ? next : v)));
+    engine().setStemGain(i, (levels[i] ?? 100) / 100, next);
+  }
+
   const defaultLen = () => (song?.bpm && bpb ? (60 / song.bpm) * bpb : 4);
 
   return (
     <div className="app">
       <Header song={song} busy={busy} onPickFile={openFile} onLoadDemo={openDemo} />
       <main className="main">
+        <div className="layout">
+        <div className="col">
         <SongPanel
           peaks={peaks}
           duration={song?.duration ?? 0}
@@ -147,6 +167,18 @@ export function App() {
         )}
         {busy && <p className="empty" role="status">Reading the recording…</p>}
         {error && <p className="error" role="alert">{error}</p>}
+        </div>
+        {song && (
+          <BandMixer
+            names={stemNames}
+            levels={levels}
+            muted={muted}
+            guitar={stemNames.indexOf(GUITAR_STEM)}
+            onLevel={setLevel}
+            onMute={toggleMute}
+          />
+        )}
+        </div>
       </main>
       <TransportBar
         position={position}

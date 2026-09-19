@@ -1,4 +1,5 @@
 import bandWorkletUrl from "./band.worklet.ts?worker&url";
+import type { Stem } from "../types";
 import type { BandCommand, BandEvent } from "./band.worklet";
 
 export class Engine {
@@ -32,10 +33,15 @@ export class Engine {
     return Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c).slice());
   }
 
-  /** Hand the song to the worklet. The engine posts copies, so the caller keeps its arrays. */
-  load(channels: Float32Array[]): void {
-    const copies = channels.map((c) => c.slice());
-    this.send({ type: "load", channels: copies }, copies.map((c) => c.buffer));
+  /** Hand the song's stems to the worklet, every stem at full gain. The engine posts copies, so the caller keeps its arrays. */
+  load(stems: Stem[]): void {
+    const copies = stems.map((s) => ({ name: s.name, channels: s.channels.map((c) => c.slice()) }));
+    this.send({ type: "load", stems: copies }, copies.flatMap((s) => s.channels.map((c) => c.buffer)));
+  }
+
+  /** Set one stem's level (0..1) and mute. The worklet glides there in about 10 ms. */
+  setStemGain(stem: number, level: number, muted: boolean): void {
+    this.send({ type: "gain", stem, level, muted });
   }
 
   async play(): Promise<void> {

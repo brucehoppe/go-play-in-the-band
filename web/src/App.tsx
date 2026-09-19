@@ -6,7 +6,7 @@ import { DEMO_INFO, DEMO_SECTIONS, synthDemo } from "./data/demo";
 import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
 import { loopName, setIn, setOut } from "./lib/loop";
 import type { LoopRange } from "./lib/loop";
-import type { Section, SongInfo } from "./types";
+import type { Section, SongInfo, Stem } from "./types";
 import { Header } from "./ui/Header";
 import { LoopPanel } from "./ui/LoopPanel";
 import { SongPanel } from "./ui/SongPanel";
@@ -62,7 +62,7 @@ export function App() {
 
   async function open(
     name: string,
-    getChannels: (e: Engine) => Promise<Float32Array[]>,
+    getStems: (e: Engine) => Promise<Stem[]>,
     meta: Meta,
     songSections: Section[] = [],
   ) {
@@ -72,13 +72,13 @@ export function App() {
       const e = engine();
       await e.init();
       e.pause();
-      const channels = await getChannels(e);
-      e.load(channels);
-      const mono = mixToMono(channels);
+      const stems = await getStems(e);
+      e.load(stems);
+      const mono = mixToMono(stems.flatMap((s) => s.channels));
       monoRef.current = mono;
       const overview = await computePeaks(mono.slice(), PEAK_BUCKETS);
       setPeaks(overview);
-      setSong({ name, duration: channels[0].length / e.sampleRate, ...meta, stemCount: 1 });
+      setSong({ name, duration: stems[0].channels[0].length / e.sampleRate, ...meta, stemCount: stems.length });
       setSections(songSections);
       setLoop(null);
       setLooping(false);
@@ -92,9 +92,9 @@ export function App() {
     }
   }
 
-  const openFile = (file: File) => open(file.name, (e) => e.decode(file), UNKNOWN);
+  const openFile = (file: File) => open(file.name, async (e) => [{ name: "Full mix", channels: await e.decode(file) }], UNKNOWN);
   const openDemo = () =>
-    open(DEMO_INFO.name, async (e) => synthDemo(e.sampleRate), {
+    open(DEMO_INFO.name, async (e) => [{ name: "Full mix", channels: synthDemo(e.sampleRate) }], {
       bpm: DEMO_INFO.bpm,
       timeSig: DEMO_INFO.timeSig,
       key: DEMO_INFO.key,

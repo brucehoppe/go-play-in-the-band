@@ -13,3 +13,9 @@ export interface Section {
   start: number;
   end: number;
 }
+
+/** One separable part of a song: a name and its audio, channel by channel. */
+export interface Stem {
+  name: string;
+  channels: Float32Array[];
+}

@@ -1,0 +1,18 @@
+# Build output
+dsp-core/target/
+dsp-core/pkg/
+web/src/wasm/
+web/dist/
+web/node_modules/
+
+# Python (server, later)
+__pycache__/
+.venv/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Raw recordings and local-only work files
+*.wav
+brag-output*/

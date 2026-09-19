@@ -14,8 +14,10 @@ interface Props {
   bpm: number | null;
   beatsPerBar: number | null;
   sampleRate: number;
-  /** The mono mix of the song. Read only; slices are copied before use. */
-  getMono: () => Float32Array | null;
+  /** Mono mixes: `band` is everything but the original guitar, `guitar` is null for a single-mix song. Read only; slices are copied before use. */
+  getLayers: () => { band: Float32Array; guitar: Float32Array | null } | null;
+  /** Original guitar level, 0..1 (0 when muted). */
+  guitarLevel: number;
   status: string;
   onLoopChange: (loop: LoopRange, announce: boolean) => void;
   onToggle: () => void;
@@ -32,6 +34,7 @@ const MAX_LINES = 120;
 
 interface Zoom {
   peaks: Float32Array;
+  guitar: Float32Array | null;
   from: number;
   to: number;
 }
@@ -40,7 +43,7 @@ export function LoopPanel(p: Props) {
   const { duration, loop } = p;
   const tempo = p.bpm && p.beatsPerBar ? { bpm: p.bpm, bpb: p.beatsPerBar } : null;
   const [zoom, setZoom] = useState<Zoom | null>(null);
-  const { box, canvas } = useWaveCanvas(zoom?.peaks ?? null);
+  const { box, canvas } = useWaveCanvas(zoom?.peaks ?? null, { peaks: zoom?.guitar ?? null, scale: p.guitarLevel });
   const dragging = useRef(false);
   const latest = useRef<LoopRange | null>(loop);
   latest.current = loop;
@@ -53,16 +56,21 @@ export function LoopPanel(p: Props) {
     }
     let cancelled = false;
     const timer = setTimeout(() => {
-      const mono = p.getMono();
-      if (!mono) return;
+      const layers = p.getLayers();
+      if (!layers) return;
+      const mono = layers.band;
       const from = Math.max(0, loop.start - PAD);
       const to = Math.min(duration, loop.end + PAD);
       const a = Math.floor(from * p.sampleRate);
       const b = Math.min(mono.length, Math.ceil(to * p.sampleRate));
       if (b - a < 2) return;
-      computePeaks(mono.slice(a, b), BUCKETS).then(
-        (peaks) => {
-          if (!cancelled) setZoom({ peaks, from, to });
+      // Band and guitar peaks are computed together, so the two layers always cover the same window.
+      Promise.all([
+        computePeaks(mono.slice(a, b), BUCKETS),
+        layers.guitar ? computePeaks(layers.guitar.slice(a, b), BUCKETS) : Promise.resolve(null),
+      ]).then(
+        ([peaks, guitar]) => {
+          if (!cancelled) setZoom({ peaks, guitar, from, to });
         },
         () => {},
       );
@@ -181,6 +189,16 @@ export function LoopPanel(p: Props) {
           {handle("in")}
           {handle("out")}
         </div>
+      )}
+      {loop && (
+        <p className="legend hint">
+          <span className="swatch band" aria-hidden="true" /> Band
+          {zoom?.guitar && (
+            <>
+              <span className="swatch guitar" aria-hidden="true" /> Original guitar
+            </>
+          )}
+        </p>
       )}
       <p className="sr-only" role="status" aria-live="polite">
         {p.status}

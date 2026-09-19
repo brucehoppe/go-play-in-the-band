@@ -12,21 +12,24 @@ export function pixelPeak(peaks: Float32Array, x: number, width: number): [numbe
   return lo === Infinity ? [0, 0] : [lo, hi];
 }
 
-/** Draw the overview waveform as one vertical bar per pixel column. */
+/** Draw the overview waveform as one vertical bar per pixel column. `scale` shrinks it toward the centre line; `clear` false layers it over what is already drawn. */
 export function drawWaveform(
   ctx: CanvasRenderingContext2D,
   peaks: Float32Array,
   width: number,
   height: number,
   color: string,
+  scale = 1,
+  clear = true,
 ): void {
-  ctx.clearRect(0, 0, width, height);
+  if (clear) ctx.clearRect(0, 0, width, height);
+  if (scale <= 0) return;
   ctx.fillStyle = color;
   const mid = height / 2;
   for (let x = 0; x < width; x++) {
     const [lo, hi] = pixelPeak(peaks, x, width);
-    const y0 = mid - hi * mid;
-    const y1 = mid - lo * mid;
+    const y0 = mid - hi * scale * mid;
+    const y1 = mid - lo * scale * mid;
     ctx.fillRect(x, y0, 1, Math.max(1, y1 - y0));
   }
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Engine } from "./audio/engine";
-import { mixToMono } from "./audio/mono";
+import { sumMono } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
 import { DEMO_INFO, DEMO_SECTIONS, GUITAR_STEM, synthDemoStems } from "./data/demo";
 import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
@@ -32,6 +32,7 @@ export function App() {
   const [levels, setLevels] = useState<number[]>([]);
   const [muted, setMuted] = useState<boolean[]>([]);
   const monoRef = useRef<Float32Array | null>(null);
+  const layersRef = useRef<{ band: Float32Array; guitar: Float32Array | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,7 +79,11 @@ export function App() {
       e.pause();
       const stems = await getStems(e);
       e.load(stems);
-      const mono = mixToMono(stems.flatMap((s) => s.channels));
+      const gi = stems.findIndex((s) => s.name === GUITAR_STEM);
+      const band = sumMono(stems.filter((_, k) => k !== gi).map((s) => s.channels));
+      const guitar = gi >= 0 ? sumMono([stems[gi].channels]) : null;
+      layersRef.current = { band, guitar };
+      const mono = guitar ? band.map((v, k) => v + guitar[k]) : band;
       monoRef.current = mono;
       const overview = await computePeaks(mono.slice(), PEAK_BUCKETS);
       setPeaks(overview);
@@ -118,6 +123,9 @@ export function App() {
     engine().setStemGain(i, (levels[i] ?? 100) / 100, next);
   }
 
+  const guitarIndex = stemNames.indexOf(GUITAR_STEM);
+  const guitarLevel = guitarIndex >= 0 && !muted[guitarIndex] ? (levels[guitarIndex] ?? 100) / 100 : 0;
+
   const defaultLen = () => (song?.bpm && bpb ? (60 / song.bpm) * bpb : 4);
 
   return (
@@ -148,7 +156,8 @@ export function App() {
             bpm={song.bpm}
             beatsPerBar={bpb}
             sampleRate={engineRef.current?.sampleRate ?? 48000}
-            getMono={() => monoRef.current}
+            getLayers={() => layersRef.current}
+            guitarLevel={guitarLevel}
             status={status}
             onLoopChange={editLoop}
             onToggle={() => {
@@ -173,7 +182,7 @@ export function App() {
             names={stemNames}
             levels={levels}
             muted={muted}
-            guitar={stemNames.indexOf(GUITAR_STEM)}
+            guitar={guitarIndex}
             onLevel={setLevel}
             onMute={toggleMute}
           />

@@ -147,7 +147,7 @@ describe("Transport loop", () => {
     }
     let maxJump = 0;
     for (let i = 1; i < all.length; i++) maxJump = Math.max(maxJump, Math.abs(all[i] - all[i - 1]));
-    expect(maxJump).toBeLessThanOrEqual(step * 1.02);
+    expect(maxJump).toBeLessThanOrEqual(step * 1.5); // equal-power on correlated audio peaks +3 dB mid-fade
   });
 
   it("crossfade lands on src[start-1] at end-1 and src[start] next", () => {

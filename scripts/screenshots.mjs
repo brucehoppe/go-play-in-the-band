@@ -9,7 +9,8 @@
 // Shot 09 is the opposite: it needs the backend (scripts/run-server.sh), CLIP=<a short recording>, and the
 // build served on a port the backend allows:  npx vite preview --port 8766, then APP_URL=http://localhost:8766/
 import { spawn } from "node:child_process";
-import { writeFileSync, mkdirSync, mkdtempSync } from "node:fs";
+import { writeFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { once } from "node:events";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -163,5 +164,11 @@ try {
       p.ws.close();
     } catch (err) { failed = true; console.log(`FAILED ${name}: ${err.message}`); }
   }
-} finally { chrome.kill(); }
+} finally {
+  // Chrome's throwaway profile is up to 140 MB; wait for Chrome to let go of it, then remove it.
+  const gone = once(chrome, "exit");
+  chrome.kill();
+  await gone;
+  rmSync(PROFILE, { recursive: true, force: true });
+}
 process.exit(failed ? 1 : 0);

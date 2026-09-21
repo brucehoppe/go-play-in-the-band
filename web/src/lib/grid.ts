@@ -24,12 +24,13 @@ export function snapLoopToBars(
   bpm: number,
   beatsPerBar: number,
   duration: number,
+  firstDownbeat = 0,
 ): [number, number] {
   const bar = barSeconds(bpm, beatsPerBar);
   if (duration < bar) return [0, duration];
-  let s = snapToBar(start, bpm, beatsPerBar);
-  let e = snapToBar(end, bpm, beatsPerBar);
-  const lastBar = Math.floor(duration / bar + 1e-9) * bar;
+  let s = snapToBar(start, bpm, beatsPerBar, firstDownbeat);
+  let e = snapToBar(end, bpm, beatsPerBar, firstDownbeat);
+  const lastBar = firstDownbeat + Math.floor((duration - firstDownbeat) / bar + 1e-9) * bar;
   if (e > lastBar) e = lastBar;
   if (e - s < bar - 1e-9) {
     if (s + bar <= lastBar + 1e-9) e = s + bar;
@@ -42,10 +43,10 @@ export function snapLoopToBars(
 }
 
 /** "bars 5–8" (1-based, end bar inclusive) or "bar 5" for a single bar. */
-export function barLabel(start: number, end: number, bpm: number, beatsPerBar: number): string {
+export function barLabel(start: number, end: number, bpm: number, beatsPerBar: number, firstDownbeat = 0): string {
   const bar = barSeconds(bpm, beatsPerBar);
-  const first = Math.round(start / bar) + 1;
-  const last = Math.max(first, Math.round(end / bar));
+  const first = Math.round((start - firstDownbeat) / bar) + 1;
+  const last = Math.max(first, Math.round((end - firstDownbeat) / bar));
   return first === last ? `bar ${first}` : `bars ${first}–${last}`;
 }
 
@@ -58,12 +59,13 @@ export interface GridLine {
 }
 
 /** Every beat line in [startSec, endSec]. */
-export function gridLines(startSec: number, endSec: number, bpm: number, beatsPerBar: number): GridLine[] {
+export function gridLines(startSec: number, endSec: number, bpm: number, beatsPerBar: number, firstDownbeat = 0): GridLine[] {
   const beat = 60 / bpm;
   const out: GridLine[] = [];
-  for (let i = Math.max(0, Math.ceil(startSec / beat - 1e-9)); i * beat <= endSec + 1e-9; i++) {
+  // Beat 0 is the first downbeat; beats before it (a pickup) are not drawn.
+  for (let i = Math.max(0, Math.ceil((startSec - firstDownbeat) / beat - 1e-9)); firstDownbeat + i * beat <= endSec + 1e-9; i++) {
     const inBar = i % beatsPerBar;
-    out.push({ sec: i * beat, bar: inBar === 0 ? i / beatsPerBar + 1 : null, beat: inBar + 1 });
+    out.push({ sec: firstDownbeat + i * beat, bar: inBar === 0 ? i / beatsPerBar + 1 : null, beat: inBar + 1 });
   }
   return out;
 }

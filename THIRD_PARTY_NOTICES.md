@@ -12,6 +12,13 @@ every build.
 | IBM Plex Sans | interface text | `@fontsource/ibm-plex-sans` |
 | IBM Plex Mono | times and numbers | `@fontsource/ibm-plex-mono` |
 
+## Rust crates compiled into the WASM core
+
+| Crate | Used for | Licence |
+|---|---|---|
+| `rustfft` (and its dependencies `num-complex`, `num-traits`, `num-integer`, `primal-check`, `strength_reduce`, `transpose`) | Fourier transforms for tempo, key and the quick split | MIT or Apache-2.0 |
+| `wasm-bindgen` | the JavaScript bridge | MIT or Apache-2.0 |
+
 ## Optional backend dependencies
 
 The local backend (`server/`) uses FastAPI and Uvicorn. Stem separation and tempo

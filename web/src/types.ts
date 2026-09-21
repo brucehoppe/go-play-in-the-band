@@ -5,6 +5,10 @@ export interface SongInfo {
   timeSig: string | null;
   key: string | null;
   stemCount: number;
+  /** Seconds to the start of bar 1. 0 unless detected. */
+  downbeat?: number;
+  /** True when tempo and key were estimated from the audio rather than known. */
+  estimated?: boolean;
 }
 
 /** A named part of a song, in seconds. */

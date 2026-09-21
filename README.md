@@ -23,7 +23,8 @@ Your own recording, loaded as a single "Full mix" (no backend needed):
 ![One of the author's own recordings loaded: a four-minute waveform with the playhead partway in, the loop panel, a single Full mix fader, and the transport with Record, Calibrate, Export mix and the speed buttons](docs/screenshots/05-own-recording.png)
 
 More: [start screen](docs/screenshots/01-start.png), [demo loaded](docs/screenshots/02-demo-loaded.png),
-[a recorded take as a new part](docs/screenshots/04-overdub-take.png).
+[a recorded take as a new part](docs/screenshots/04-overdub-take.png),
+[song tools on a real recording: detected tempo and key, click track, quick split](docs/screenshots/06-song-tools.png).
 
 ## Status
 
@@ -44,11 +45,30 @@ What exists so far:
   later takes layer over it. Takes are saved in your browser (IndexedDB) and come back when
   you reopen the same song. Recording works at 100% speed. Use headphones, or the mic
   re-records the band. A Calibrate button measures round-trip latency with a click.
+- **Song tools.** When you load your own recording, the app estimates its **tempo, first
+  beat and key** (Rust/WASM, in a worker; 4/4 is assumed), so the bar grid and Snap to bars
+  work on your files too. The tempo is editable, with ½× and 2× buttons for half- and
+  double-time guesses. **Add click track** adds a metronome part lined up with the grid.
+  **Quick split into parts** pulls a full mix apart into percussive (drums-like), low bass
+  and everything else; the three parts add back up to the original exactly.
 - **Export.** "Export mix" writes what you hear (every part at its level, mutes respected)
   as a WAV, with headroom so it does not clip.
 - **Optional local backend** (`server/`). If it is running, opening a file splits it into
   parts with Demucs; without it a file is a single "Full mix". The demo needs no backend.
 - **Offline.** A service worker caches the demo after the first visit.
+
+### Can it isolate parts of a song?
+
+Partly. There are two routes, and they are different things:
+
+- **Quick split (built in, no install).** Classic signal processing: median-filtering the
+  spectrogram separates sounds that are steady in time (harmonic) from sounds that are broad
+  in frequency (percussive), and a 200 Hz cut pulls out the low bass. It is fast (a few
+  seconds a song) and runs in the browser. It **cannot** lift out one instrument: guitar,
+  keys and voice all stay together in the harmonic part, and the split is soft, so each part
+  carries some ghost of the others.
+- **Real instrument stems (optional backend).** Separating guitar from keys from voice
+  needs a trained neural network. The optional local backend uses Demucs for that.
 
 What has **not** been verified:
 
@@ -56,6 +76,8 @@ What has **not** been verified:
 - Recording, overdubbing and calibration have only been run with a fake microphone, so
   whether layers line up in time on real hardware is unknown.
 - Stem separation has not been run against real Demucs output.
+- Tempo, key and quick-split results have not been checked by ear; tempo can be off by a
+  factor of two, the first beat is not necessarily beat one, and 4/4 is assumed.
 - Windows is checked in CI only, not by hand.
 
 Checked so far: unit tests (web, Rust and server), type-checking, the production build, and a

@@ -12,6 +12,8 @@ interface Props {
   loop: LoopRange | null;
   looping: boolean;
   bpm: number | null;
+  /** Seconds to the start of bar 1. */
+  downbeat: number;
   beatsPerBar: number | null;
   sampleRate: number;
   /** Mono mixes: `band` is everything but the original guitar, `guitar` is null for a single-mix song. Read only; slices are copied before use. */
@@ -91,10 +93,10 @@ export function LoopPanel(p: Props) {
 
   const lines = useMemo(() => {
     if (!tempo || !loop) return [];
-    const all = gridLines(from, to, tempo.bpm, tempo.bpb);
+    const all = gridLines(from, to, tempo.bpm, tempo.bpb, p.downbeat);
     return all.length > MAX_LINES ? all.filter((l) => l.bar !== null) : all;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from, to, p.bpm, p.beatsPerBar, !!loop]);
+  }, [from, to, p.bpm, p.beatsPerBar, p.downbeat, !!loop]);
 
   const snapReason = tempo ? null : "Snap needs a known tempo";
   const bar = tempo ? barSeconds(tempo.bpm, tempo.bpb) : 0;

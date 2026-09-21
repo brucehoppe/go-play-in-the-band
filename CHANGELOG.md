@@ -20,3 +20,4 @@ This project is a thought experiment and proof of concept. Nothing here is a rel
 - Live demo fixed: the Pages deploy job now has `contents: read`; Pages enabled for the repository.
 - Screenshots added under `docs/screenshots/`.
 - Song tools, in `dsp-core` on `rustfft`: tempo, first-beat and key estimation for loaded recordings (so the bar grid and Snap to bars work on your own files), an editable tempo with ½× / 2×, a click-track part, and a quick split into percussive, bass and harmonic parts that add back up to the original. The bar grid now honours a first-downbeat offset.
+- Security: `SECURITY.md`, weekly Dependabot updates (npm, cargo, pip, actions); on GitHub, secret scanning with push protection, private vulnerability reporting, CodeQL code scanning, and a ruleset protecting `main`.

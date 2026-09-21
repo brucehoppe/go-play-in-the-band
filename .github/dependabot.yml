@@ -1,0 +1,22 @@
+# Weekly update pull requests. Security updates arrive as soon as they are known.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    groups:
+      web:
+        patterns: ["*"]
+  - package-ecosystem: cargo
+    directory: /dsp-core
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /server
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

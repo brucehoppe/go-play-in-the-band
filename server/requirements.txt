@@ -1,6 +1,6 @@
 fastapi>=0.141.1
 uvicorn>=0.29
-python-multipart>=0.0.9
+python-multipart>=0.0.32
 # optional, large (scripts/install.sh --stems): demucs, soundfile, librosa
 pytest>=9.1.1
 httpx>=0.27

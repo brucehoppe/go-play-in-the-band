@@ -1,0 +1,95 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui); }
+h1, h2 { font-family: var(--font-display); margin: 0; }
+button {
+  font: inherit; color: var(--text); background: var(--raised);
+  border: 1px solid var(--border); border-radius: 8px;
+  min-height: 44px; min-width: 44px; padding: 0 16px; cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--amber); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); }
+
+.app { display: grid; grid-template-rows: auto 1fr auto; min-height: 100vh; }
+.header {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
+  padding: 12px 24px; border-bottom: 1px solid var(--border); background: var(--panel);
+}
+.header h1 { font-size: 1.4rem; margin-right: auto; }
+.filecard { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--text-2); font-size: 0.9rem; }
+.filecard strong { color: var(--text); font-weight: 600; }
+.main { padding: 24px; max-width: 1400px; width: 100%; margin: 0 auto; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.panel h2 { font-size: 1rem; color: var(--text-2); margin-bottom: 12px; }
+.empty { color: var(--text-2); }
+.error { color: var(--red-2); margin-top: 12px; }
+
+.wave {
+  position: relative; height: 140px; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 8px; cursor: pointer; touch-action: none;
+}
+.wave canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); pointer-events: none; }
+
+.transport {
+  display: flex; align-items: center; gap: 16px; padding: 12px 24px;
+  border-top: 1px solid var(--border); background: var(--panel);
+}
+.transport .time { font-family: var(--font-mono); font-size: 1.1rem; margin-right: auto; }
+.transport .play { min-width: 64px; min-height: 64px; border-radius: 50%; background: var(--amber); color: #16140f; font-weight: 600; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.wave .loopband { position: absolute; top: 0; bottom: 0; background: rgba(232, 169, 58, 0.18); border-left: 2px solid var(--amber); border-right: 2px solid var(--amber); pointer-events: none; opacity: 0.6; }
+.wave .loopband.on { opacity: 1; background: rgba(232, 169, 58, 0.3); }
+.chips { display: flex; gap: 4px; margin-top: 8px; }
+.chip { flex: 1 1 0; min-width: 44px; padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.loop-panel { margin-top: 16px; }
+.loop-head { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+.loop-head h2 { margin: 0; margin-right: auto; color: var(--amber); font-size: 1.1rem; }
+.toggle[aria-pressed="true"] { background: var(--amber); color: #16140f; border-color: var(--amber); font-weight: 600; }
+.loop-times { margin: 0 0 12px; color: var(--text); }
+.loop-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.hint { color: var(--text-2); font-size: 0.9rem; }
+.zoom { position: relative; height: 160px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; touch-action: none; overflow: hidden; }
+.zoom canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.zoom .pad { position: absolute; top: 0; bottom: 0; background: rgba(22, 20, 15, 0.7); pointer-events: none; }
+.zoom .gl { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--border); pointer-events: none; }
+.zoom .gl.bar { background: var(--text-2); }
+.gl-num { position: absolute; top: 2px; left: 4px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-2); }
+.handle { position: absolute; top: 0; bottom: 0; width: 44px; margin-left: -22px; cursor: ew-resize; touch-action: none; display: flex; justify-content: center; }
+.handle .grip { width: 4px; height: 100%; background: var(--amber); border-radius: 2px; }
+.handle.in .grip { box-shadow: 6px 0 0 -1px var(--amber); }
+.handle.out .grip { box-shadow: -6px 0 0 -1px var(--amber); }
+
+.layout { display: grid; gap: 16px; align-items: start; }
+.col { min-width: 0; }
+@media (min-width: 1280px) {
+  .layout { grid-template-columns: minmax(0, 1fr) 320px; }
+}
+.band-panel { margin-top: 16px; }
+@media (min-width: 1280px) { .band-panel { margin-top: 0; } }
+.your-part { border: 1px solid var(--teal); background: rgba(111, 183, 160, 0.1); border-radius: 10px; padding: 12px; margin-bottom: 16px; }
+.your-part.disabled { border-style: dashed; background: none; opacity: 0.7; }
+.part-tag { margin: 0 0 8px; font-family: var(--font-display); font-weight: 700; letter-spacing: 0.08em; font-size: 0.8rem; color: var(--teal); }
+.stem-row { display: flex; align-items: center; gap: 12px; }
+.stem-row label { margin-right: auto; font-weight: 600; }
+.readout { color: var(--text-2); min-width: 4ch; text-align: right; }
+.fader { display: block; width: 100%; min-height: 44px; margin: 4px 0; accent-color: var(--amber); cursor: pointer; }
+.your-part .fader { accent-color: var(--teal); }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+.presets .preset { flex: 1 1 auto; padding: 0 10px; }
+.your-part .toggle[aria-pressed="true"] { background: var(--teal); border-color: var(--teal); color: #16140f; font-weight: 600; }
+.guitar-hint { margin: 0; }
+.stems { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mute { padding: 0; font-family: var(--font-mono); font-weight: 600; }
+
+.legend { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; }
+.swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; }
+.swatch.band { background: var(--amber); }
+.swatch.guitar { background: var(--teal); margin-left: 12px; }
+
+.speeds { display: flex; align-items: center; gap: 6px; }
+.speeds button { min-height: 44px; padding: 0 12px; }
+.speeds button.on { background: var(--amber); color: #16140f; font-weight: 600; }

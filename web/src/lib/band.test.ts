@@ -1,0 +1,29 @@
+import { describe, expect, it } from "vitest";
+import { GUITAR_PRESETS, guitarHint, stemLabel } from "./band";
+
+describe("guitarHint", () => {
+  it("changes with the level", () => {
+    expect(guitarHint(0)).toBe("The guitar is yours. Play it against the band.");
+    expect(guitarHint(15)).toBe("A quiet guide: enough to stay oriented.");
+    expect(guitarHint(25)).toBe("A quiet guide: enough to stay oriented.");
+    expect(guitarHint(26)).toBe("Original guitar at full volume.");
+    expect(guitarHint(100)).toBe("Original guitar at full volume.");
+  });
+});
+
+describe("GUITAR_PRESETS", () => {
+  it("are Mute 0, Quiet guide 15, Full 100", () => {
+    expect(GUITAR_PRESETS.map((p) => [p.label, p.level])).toEqual([
+      ["Mute", 0],
+      ["Quiet guide", 15],
+      ["Full", 100],
+    ]);
+  });
+});
+
+describe("stemLabel", () => {
+  it("capitalises the first letter", () => {
+    expect(stemLabel("bass")).toBe("Bass");
+    expect(stemLabel("Full mix")).toBe("Full mix");
+  });
+});

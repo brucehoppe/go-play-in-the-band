@@ -5,7 +5,9 @@
 //   REC_DIR=~/Music/GarageBand/recordings node scripts/screenshots.mjs [scene ...]
 //
 // Shots 05-07 load your own recordings (names in SONGS below) from REC_DIR; without it they are skipped.
-// The local backend is blocked inside this browser so a recording stays one full mix.
+// The local backend is blocked inside this browser for those, so a recording stays one full mix.
+// Shot 09 is the opposite: it needs the backend (scripts/run-server.sh), CLIP=<a short recording>, and the
+// build served on a port the backend allows:  npx vite preview --port 8766, then APP_URL=http://localhost:8766/
 import { spawn } from "node:child_process";
 import { writeFileSync, mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -19,6 +21,7 @@ const CHROME = process.env.CHROME ?? "/Applications/Google Chrome.app/Contents/M
 const PORT = 9333;
 const REC = process.env.REC_DIR ? process.env.REC_DIR.replace(/\/?$/, "/") : null;
 const SONGS = { full: "no new tale- 2026-05-10, 13.45.mp3", split: "mad world- 2026-05-10, 18.21.mp3" };
+const CLIP = process.env.CLIP ?? null;
 const only = process.argv.slice(2);
 mkdirSync(OUT, { recursive: true });
 
@@ -66,14 +69,21 @@ class Page {
   async shot(name, width) {
     await this.waitFor(`!${this.text("Preparing")}`);
     await sleep(600);
-    // Grow the window to the whole page so the transport bar at the bottom is in the picture.
-    const h = await this.eval(`Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)`);
-    await this.size(width, Math.max(h, 760));
+    // Grow the window to the whole page so nothing hides behind the pinned transport bar.
+    // The waveforms grow with the window, so repeat until the height settles.
+    let h = 0;
+    for (let i = 0; i < 6; i++) {
+      const next = Math.max(760, await this.eval(`document.documentElement.scrollHeight`));
+      if (next === h) break;
+      h = next;
+      await this.size(width, h);
+      await sleep(300);
+    }
     await this.eval(`window.scrollTo(0,0)`);
     await sleep(500);
     const { data } = await this.send("Page.captureScreenshot", { format: "png" });
     writeFileSync(`${OUT}/${name}.png`, Buffer.from(data, "base64"));
-    console.log(`${name}.png  ${width}x${Math.max(h, 760)}  header: ${await this.eval(`document.querySelector(".filecard")?.innerText.replace(/\\n/g," ") ?? "(none)"`)}`);
+    console.log(`${name}.png  ${width}x${h}  header: ${await this.eval(`document.querySelector(".filecard")?.innerText.replace(/\\n/g," ") ?? "(none)"`)}`);
   }
 }
 
@@ -128,6 +138,17 @@ const scenes = {
     await p.click("75%");
     await p.shot("07-devices-tempo", 1440); return p;
   },
+  "08-slow-and-solo": async () => {
+    const p = await fresh(1440, 900); await demo(p);
+    await p.click("Solo guitar"); await p.click("25%");
+    await p.shot("08-slow-and-solo", 1440); return p;
+  },
+  "09-instrument-stems": async () => {
+    const p = await fresh(1440, 900);
+    await p.upload(CLIP);
+    await p.waitFor(`document.querySelector("#stem-guitar") && /BPM\\s*\\d/.test(document.querySelector(".filecard").innerText)`, 600000, "instrument stems");
+    await p.shot("09-instrument-stems", 1440); return p;
+  },
 };
 
 let failed = false;
@@ -135,6 +156,7 @@ try {
   for (const [name, run] of Object.entries(scenes)) {
     if (only.length && !only.includes(name)) continue;
     if (!REC && /^0[567]/.test(name)) { console.log(`skipped ${name}: set REC_DIR`); continue; }
+    if (!CLIP && /^09/.test(name)) { console.log(`skipped ${name}: set CLIP, and see the note at the top`); continue; }
     try {
       const p = await run();
       if (p.errors.length) { failed = true; console.log(`  console errors in ${name}:`, p.errors); }

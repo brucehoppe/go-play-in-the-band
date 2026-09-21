@@ -14,11 +14,12 @@ interface Props {
   hasTake: boolean;
   onRecord: () => void;
   onExport: () => void;
+  onCalibrate: () => void;
 }
 
 const SPEEDS = [0.5, 0.75, 0.9, 1];
 
-export function TransportBar({ position, duration, playing, disabled, onToggle, onRewind, speed, preparing, onSpeed, recording, hasTake, onRecord, onExport }: Props) {
+export function TransportBar({ position, duration, playing, disabled, onToggle, onRewind, speed, preparing, onSpeed, recording, hasTake, onRecord, onExport, onCalibrate }: Props) {
   return (
     <footer className="transport">
       <div className="time" aria-live="off">
@@ -31,6 +32,7 @@ export function TransportBar({ position, duration, playing, disabled, onToggle, 
       <button disabled={disabled} aria-pressed={recording} className={recording ? "on" : ""} onClick={onRecord}>
         {recording ? "■ Stop take" : "● Record"}
       </button>
+      <button disabled={disabled || recording} onClick={onCalibrate}>Calibrate</button>
       <button disabled={!hasTake || recording} onClick={onExport}>Export WAV</button>
       <div className="speeds" role="group" aria-label="Speed">
         {SPEEDS.map((v) => (

@@ -41,6 +41,14 @@ export function App() {
   const [preparing, setPreparing] = useState(false);
   const [recording, setRecording] = useState(false);
   const [take, setTake] = useState<Float32Array | null>(null);
+  const [latency, setLatency] = useState(() => {
+    try {
+      const v = Number(localStorage.getItem("gpitb:latency"));
+      return Number.isFinite(v) && v >= 0 && v < 48000 ? v : 0;
+    } catch {
+      return 0;
+    }
+  });
   const recorderRef = useRef<Recorder | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -176,13 +184,31 @@ export function App() {
         engine().pause();
         const raw = await recorderRef.current!.stop();
         setRecording(false);
-        const aligned = alignTake(raw, 0);
+        const aligned = alignTake(raw, latency);
         setTake(aligned);
         void saveTake(`take:${song?.name ?? "song"}`, aligned);
         setStatus("Take recorded. Export it with the band.");
       }
     } catch {
       setRecording(false);
+      setError("Could not use the microphone. Allow access and try again.");
+    }
+  }
+
+  async function calibrate() {
+    try {
+      const e = engine();
+      await e.init();
+      setStatus("Calibrating: keep the room quiet and the speakers audible to the mic.");
+      const frames = await e.calibrate();
+      setLatency(frames);
+      try {
+        localStorage.setItem("gpitb:latency", String(frames));
+      } catch {
+        /* storage unavailable: keep it for this session only */
+      }
+      setStatus(frames ? `Calibrated: ${Math.round((frames / e.sampleRate) * 1000)} ms.` : "Did not hear the click. Turn the volume up and try again.");
+    } catch {
       setError("Could not use the microphone. Allow access and try again.");
     }
   }
@@ -278,6 +304,7 @@ export function App() {
         hasTake={take !== null}
         onRecord={toggleRecord}
         onExport={exportTake}
+        onCalibrate={calibrate}
       />
     </div>
   );

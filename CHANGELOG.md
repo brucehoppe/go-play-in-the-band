@@ -9,3 +9,4 @@
 - Step 5: record a take from the microphone (raw PCM, no processing), saved to IndexedDB; export the take mixed with the band as WAV.
 - Optional local backend (`server/`, 127.0.0.1 only): `/health`, `/analyse`, `/separate` with a content-hash cache. Demucs and librosa are optional installs.
 - Web app manifest.
+- Latency calibration: a Calibrate button plays a click, records it on the mic, and shifts takes by the measured delay (stored in this browser).

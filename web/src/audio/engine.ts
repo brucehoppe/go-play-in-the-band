@@ -1,4 +1,5 @@
 import bandWorkletUrl from "./band.worklet.ts?worker&url";
+import { measureLatency } from "./take";
 import { Recorder } from "./recorder";
 import { stretchChannels } from "./stretch";
 import type { Stem } from "../types";
@@ -80,6 +81,26 @@ export class Engine {
   setStemGain(stem: number, level: number, muted: boolean): void {
     this.gains[stem] = { level, muted };
     this.send({ type: "gain", stem, level, muted });
+  }
+
+  /** Play a click through the speakers, record it on the mic, and return the round-trip latency in frames (0 if not heard). */
+  async calibrate(): Promise<number> {
+    await this.ctx.resume();
+    const rec = this.recorder();
+    await rec.start();
+    const started = this.ctx.currentTime;
+    const at = started + 0.5;
+    const osc = this.ctx.createOscillator();
+    const env = this.ctx.createGain();
+    osc.frequency.value = 1000;
+    env.gain.setValueAtTime(0.8, at);
+    env.gain.exponentialRampToValueAtTime(0.001, at + 0.02);
+    osc.connect(env).connect(this.ctx.destination);
+    osc.start(at);
+    osc.stop(at + 0.03);
+    await new Promise((r) => setTimeout(r, 1200));
+    const heard = await rec.stop();
+    return measureLatency(heard, Math.round((at - started) * this.ctx.sampleRate));
   }
 
   recorder(): Recorder {

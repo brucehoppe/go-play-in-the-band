@@ -125,7 +125,7 @@ pub fn stretch(input: &[f32], ratio: f32, frame: usize, seek: usize) -> Vec<f32>
             let mut c = lo;
             while c <= hi {
                 let mut s = 0.0f32;
-                for i in (0..frame).step_by(2) {
+                for i in (0..frame).step_by(8) {
                     let idx = c as usize + i;
                     if idx < n {
                         s += input[idx] * target[i];
@@ -135,7 +135,7 @@ pub fn stretch(input: &[f32], ratio: f32, frame: usize, seek: usize) -> Vec<f32>
                     best_score = s;
                     best = c;
                 }
-                c += 1;
+                c += 2;
             }
         }
         let b = best as usize;

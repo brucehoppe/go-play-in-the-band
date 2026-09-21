@@ -18,7 +18,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Job-level permissions replace the top-level ones, so contents must be repeated for checkout.
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:

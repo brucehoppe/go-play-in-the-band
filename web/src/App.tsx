@@ -3,7 +3,7 @@ import { Engine } from "./audio/engine";
 import { alignTake, encodeWav, mixParts, placeTake } from "./audio/take";
 import type { Recorder } from "./audio/recorder";
 import { analyseSong, QUICK_PARTS, quickSplit } from "./audio/analysis";
-import { sumMono } from "./audio/mono";
+import { sumMono, waveLayers } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
 import { fetchStem, separate, serverAvailable } from "./data/server";
 import { loadTakes, saveTake } from "./data/takes";
@@ -98,11 +98,8 @@ export function App() {
   /** Rebuild the waveform layers and overview from the current parts. */
   async function refreshViews(stems: Stem[]) {
     stemsRef.current = stems;
-    const gi = stems.findIndex((s) => s.name === GUITAR_STEM);
-    const band = sumMono(stems.filter((_, k) => k !== gi).map((s) => s.channels));
-    const guitar = gi >= 0 ? sumMono([stems[gi].channels]) : null;
+    const { band, guitar, mono } = waveLayers(stems, GUITAR_STEM);
     layersRef.current = { band, guitar };
-    const mono = guitar ? band.map((v, k) => v + guitar[k]) : band;
     monoRef.current = mono;
     setPeaks(await computePeaks(mono.slice(), PEAK_BUCKETS));
   }
@@ -128,7 +125,7 @@ export function App() {
       saved.forEach((t, k) => stems.push({ name: `Take ${k + 1}`, channels: [placeTake(t, 0, length)] }));
       e.load(stems);
       await refreshViews(stems);
-      const info: SongInfo = { name, duration: stems[0].channels[0].length / e.sampleRate, ...meta, stemCount: stems.length };
+      const info: SongInfo = { name, duration: stems[0].channels[0].length / e.sampleRate, ...meta, stemCount: stems.length, fullMix: stems.some((st) => st.name === "Full mix") };
       setSong(info);
       if (meta.bpm === null && monoRef.current) {
         // Estimate tempo, first beat and key in the background; 4/4 is assumed.
@@ -304,7 +301,7 @@ export function App() {
     setMuted(stems.map(() => false));
     setSolo(null);
     setSpeed(1);
-    setSong((cur) => (cur ? { ...cur, stemCount: stems.length } : cur));
+    setSong((cur) => (cur ? { ...cur, stemCount: stems.length, fullMix: stems.some((st) => st.name === "Full mix") } : cur));
   }
 
   async function splitParts() {

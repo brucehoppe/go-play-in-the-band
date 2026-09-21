@@ -19,12 +19,13 @@ More screenshots: [docs/screenshots](docs/screenshots).
 - **Play**: load WAV, MP3, FLAC or M4A; whole-song waveform; click to seek.
 - **Loop**: drag IN/OUT, snap to bars, sample-accurate with a crossfade.
 - **Mix**: a fader and mute per part; Mute / Quiet guide / Full presets for the guitar.
-- **Slow down**: 25 to 125% at the same pitch (our own WSOLA stretcher), with the BPM you hear.
+- **Slow down**: 25 to 125% at the same pitch, with the BPM you hear. Our own stretcher keeps each pick attack crisp.
 - **Solo**: hear one part alone; slow it down to pick it out.
 - **Record and overdub**: each take becomes a new part; Record with nothing loaded starts a song.
 - **Audio devices**: record from a USB interface (Input 1, 2 or both); play through a USB headphone amp.
 - **Song tools**: estimated tempo, first beat and key; editable tempo; click track.
-- **Split**: right in the band panel. Quick split (drums-like, low bass, the rest) works anywhere; Instruments needs the backend.
+- **Split**: right in the band panel. Quick split (drums-like, low bass, the rest) works anywhere.
+- **Isolate the guitar**: Instruments splits a song into guitar, bass, drums, piano, vocals and other with Demucs, on your computer. Needs the splitter below.
 - **Export mix**: what you hear, as a WAV.
 - **Private**: nothing you load leaves your computer. Works offline after one visit.
 
@@ -44,7 +45,12 @@ Needs Node.js 24+, Rust stable with the `wasm32-unknown-unknown` target, and `wa
     npm run dev
     npm test
 
-Optional backend for real instrument stems (Demucs, 127.0.0.1 only): `scripts/install.sh`, then `scripts/run-server.sh`.
+## Instrument splitter (optional)
+
+Isolating the guitar needs a neural network (Demucs). It runs on your computer only, about 1 GB to install.
+
+    scripts/install.sh --stems     # once   (Windows: scripts\install.ps1 -Stems)
+    scripts/run-server.sh          # leave running, then press Instruments in the app
 
 ## More
 

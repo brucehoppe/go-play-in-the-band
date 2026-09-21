@@ -119,4 +119,10 @@ this section records where the build differs from it.
 - Devices: the recorder asks for the chosen `deviceId` in stereo and picks Input 1 or 2 with a
   channel splitter (as minor-pentatonic-go does); output uses `AudioContext.setSinkId`. The
   choice is stored in localStorage and validated on read. Tempo is a 50 to 125% slider.
+- Stretcher, as tuned: onsets are found from the level of the signal's first difference; a
+  time map runs at slope 1 across each attack (frame + seek before it, seek after) and at a
+  lower slope between attacks. Only when slowing down. Hop is frame/4.
+- Backend, as working: Demucs runs in a thread pool on `mps`, `cuda` or `cpu`; stems more than
+  40 dB below the loudest are not listed; CORS and Private Network Access are limited to the
+  app's own origins.
 

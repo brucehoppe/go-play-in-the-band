@@ -23,6 +23,6 @@ every build.
 ## Optional backend dependencies
 
 The local backend (`server/`) uses FastAPI and Uvicorn. Stem separation and tempo
-detection use Demucs and librosa, which are installed separately by the user and are not
+detection use Demucs (MIT; its `htdemucs_6s` model weights are downloaded by Demucs on first use), PyTorch, soundfile and librosa, which are installed separately by the user and are not
 bundled or distributed with this project. Check their own licences before redistributing
 anything built with them.

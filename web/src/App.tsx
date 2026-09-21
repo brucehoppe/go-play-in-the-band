@@ -170,7 +170,7 @@ export function App() {
       // With the local backend running, split the recording into parts; otherwise it stays one "Full mix".
       if (await serverAvailable()) {
         try {
-          setStatus("Splitting into parts on this computer. This can take a few minutes.");
+          setStatus("Splitting into instruments on this computer. A few seconds per minute of music on a recent Mac; much longer without a GPU.");
           const result = await separate(file);
           return await Promise.all(
             result.stems.map(async (n) => ({ name: n.replace(/\.wav$/, ""), channels: await e.decode(await fetchStem(result.hash, n)) })),
@@ -333,7 +333,7 @@ export function App() {
       return;
     }
     if (!(await serverAvailable())) {
-      setStatus("The local backend is not running. Start it with scripts/run-server.sh (after scripts/install.sh), then press Instruments again. Quick split works without it.");
+      setStatus("The instrument splitter is not running. In a terminal, run scripts/install.sh --stems once, then scripts/run-server.sh, and press Instruments again. Quick split works without it.");
       return;
     }
     await openFileParts(file);

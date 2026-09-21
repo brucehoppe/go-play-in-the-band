@@ -16,3 +16,7 @@ Thumbs.db
 # Raw recordings and local-only work files
 *.wav
 brag-output*/
+
+# Local app build output
+desktop/target/
+out/

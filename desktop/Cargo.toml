@@ -1,0 +1,14 @@
+[package]
+name = "go-play-in-the-band"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Go Play in the Band as a local app: the built web app in one file, served on 127.0.0.1 and opened in your browser."
+
+[dependencies]
+include_dir = "0.7"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

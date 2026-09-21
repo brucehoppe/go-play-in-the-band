@@ -4,111 +4,48 @@
 
 Coded by Bruce Hoppe
 
-> **This is a thought experiment and proof of concept (POC), not a finished product.**
-> It explores what a guitarist's play-along practice tool could feel like, and how far a
-> browser (TypeScript, plus Rust compiled to WebAssembly) can take it. Parts of it have
-> not been tested on real hardware or by ear; see [Status](#status). Expect rough edges,
-> and do not rely on it.
+> A **thought experiment and proof of concept**, not a finished product. It has passed automated
+> tests but has not been judged by ear or tried on a real microphone. See [docs/STATUS.md](docs/STATUS.md).
 
-A play-along practice app for guitarists. Load a recording, turn the original guitar
-down or out, loop a hard section, slow it down, and record yourself playing the part
-against the rest of the band, so you feel like the guitarist in the band.
+A play-along practice app for guitarists: load a recording, turn the guitar down, loop a hard
+section, slow it down, and record yourself with the band. TypeScript, plus Rust compiled to WebAssembly.
 
-## Screenshots
+![The demo song: waveform, a four-bar loop, the band mixer with the guitar muted, speed at 75%](docs/screenshots/03-loop-mute-75.png)
 
-![The demo song loaded: whole-song waveform with section chips, a four-bar loop, the band mixer with the guitar muted, and the speed set to 75%](docs/screenshots/03-loop-mute-75.png)
+More screenshots: [docs/screenshots](docs/screenshots).
 
-Your own recording, loaded as a single "Full mix" (no backend needed):
+## Features
 
-![One of the author's own recordings loaded: a four-minute waveform with the playhead partway in, the loop panel, a single Full mix fader, and the transport with Record, Calibrate, Export mix and the speed buttons](docs/screenshots/05-own-recording.png)
+- **Play**: load WAV, MP3, FLAC or M4A; whole-song waveform; click to seek.
+- **Loop**: drag IN/OUT, snap to bars, sample-accurate with a crossfade.
+- **Mix**: a fader and mute per part; Mute / Quiet guide / Full presets for the guitar.
+- **Speed**: 50, 75, 90 or 100% at the same pitch (our own WSOLA stretcher).
+- **Record and overdub**: each take becomes a new part; Record with nothing loaded starts a song.
+- **Song tools**: estimated tempo, first beat and key; editable tempo; click track.
+- **Quick split**: drums-like, low bass and everything else. Not single instruments; that needs the backend.
+- **Export mix**: what you hear, as a WAV.
+- **Private**: nothing you load leaves your computer. Works offline after one visit.
 
-More: [start screen](docs/screenshots/01-start.png), [demo loaded](docs/screenshots/02-demo-loaded.png),
-[a recorded take as a new part](docs/screenshots/04-overdub-take.png),
-[song tools on a real recording: detected tempo and key, click track, quick split](docs/screenshots/06-song-tools.png).
+## Local app
 
-## Status
+One small program with the web app inside it. It opens in your browser and stops after you close the page.
 
-What exists so far:
-
-- **Load and play.** Load a file (WAV, MP3, FLAC, M4A) or the demo song. See the whole song
-  as a waveform (computed in Rust/WASM), click to seek, play and pause.
-- **Loops.** Drag the IN/OUT handles (or nudge them with the arrow keys), snap them to bars,
-  or click a section chip. Looping is sample-accurate with a short crossfade.
-- **Band mixer.** The demo song is a five-part band (guitar, bass, drums, keys, other), with a
-  fader and mute for each part. The guitar card, YOUR PART, has Mute, Quiet guide and Full
-  presets. Gain changes are smoothed over about 10 ms, so they never click.
-- **Speed.** 50, 75, 90 or 100%. Each speed is pre-rendered by our own WSOLA time-stretcher
-  (Rust/WASM, in a worker), so playback stays exact. The first switch shows "Preparing…".
-- **Record and overdub.** Record a take from the microphone (raw, no processing). Each take
-  becomes a new part in the mixer ("Take 1", "Take 2", …) with its own fader and mute, so you
-  can keep recording on top. With nothing loaded, Record makes your first take the song and
-  later takes layer over it. Takes are saved in your browser (IndexedDB) and come back when
-  you reopen the same song. Recording works at 100% speed. Use headphones, or the mic
-  re-records the band. A Calibrate button measures round-trip latency with a click.
-- **Song tools.** When you load your own recording, the app estimates its **tempo, first
-  beat and key** (Rust/WASM, in a worker; 4/4 is assumed), so the bar grid and Snap to bars
-  work on your files too. The tempo is editable, with ½× and 2× buttons for half- and
-  double-time guesses. **Add click track** adds a metronome part lined up with the grid.
-  **Quick split into parts** pulls a full mix apart into percussive (drums-like), low bass
-  and everything else; the three parts add back up to the original exactly.
-- **Export.** "Export mix" writes what you hear (every part at its level, mutes respected)
-  as a WAV, with headroom so it does not clip.
-- **Optional local backend** (`server/`). If it is running, opening a file splits it into
-  parts with Demucs; without it a file is a single "Full mix". The demo needs no backend.
-- **Offline.** A service worker caches the demo after the first visit.
-
-### Can it isolate parts of a song?
-
-Partly. There are two routes, and they are different things:
-
-- **Quick split (built in, no install).** Classic signal processing: median-filtering the
-  spectrogram separates sounds that are steady in time (harmonic) from sounds that are broad
-  in frequency (percussive), and a 200 Hz cut pulls out the low bass. It is fast (a few
-  seconds a song) and runs in the browser. It **cannot** lift out one instrument: guitar,
-  keys and voice all stay together in the harmonic part, and the split is soft, so each part
-  carries some ghost of the others.
-- **Real instrument stems (optional backend).** Separating guitar from keys from voice
-  needs a trained neural network. The optional local backend uses Demucs for that.
-
-What has **not** been verified:
-
-- Stretch quality on guitar at 50% and 75% has not been judged by ear.
-- Recording, overdubbing and calibration have only been run with a fake microphone, so
-  whether layers line up in time on real hardware is unknown.
-- Stem separation has not been run against real Demucs output.
-- Tempo, key and quick-split results have not been checked by ear; tempo can be off by a
-  factor of two, the first beat is not necessarily beat one, and 4/4 is assumed.
-- Windows is checked in CI only, not by hand.
-
-Checked so far: unit tests (web, Rust and server), type-checking, the production build, and a
-headless Chrome run (demo and a real four-minute recording load, speed switches, Record and
-Stop, no console errors). See [CHANGELOG.md](CHANGELOG.md) and `docs/superpowers/specs/`.
+    ./scripts/build.sh --install      # macOS: builds "Go Play in the Band.app" into ~/Applications
+    .\scripts\build.ps1               # Windows: builds "Go Play in the Band.exe" into .\out
 
 ## Develop
 
-Needs Node.js 24+, Rust (stable) with the `wasm32-unknown-unknown` target, and
-`wasm-pack` (`cargo install wasm-pack`). Works on Windows and macOS.
+Needs Node.js 24+, Rust stable with the `wasm32-unknown-unknown` target, and `wasm-pack`.
 
     cd web
     npm install
-    npm run dev        # builds the WASM core, then serves the app
-    npm test           # unit tests
-    cargo test --manifest-path ../dsp-core/Cargo.toml
+    npm run dev
+    npm test
 
-### Optional local backend
+Optional backend for real instrument stems (Demucs, 127.0.0.1 only): `scripts/install.sh`, then `scripts/run-server.sh`.
 
-Only needed to split a recording into parts. It listens on 127.0.0.1 only.
+## More
 
-    scripts/install.sh          # macOS; scripts\install.ps1 on Windows
-    .venv/bin/python -m pip install demucs librosa    # large; separation and tempo
-    scripts/run-server.sh       # scripts\run-server.ps1 on Windows
+[Status](docs/STATUS.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Design](docs/superpowers/specs/) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
-Nothing you load leaves your computer.
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for what the app promises and how to report a problem privately.
-
-## Licence
-
-MIT. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT. See [LICENSE](LICENSE).

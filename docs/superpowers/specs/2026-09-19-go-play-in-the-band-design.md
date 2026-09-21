@@ -112,4 +112,8 @@ this section records where the build differs from it.
 - Crates considered and not added: `symphonia` (the browser already decodes), `dasp` and
   `spectrum-analyzer` (nothing here needs them yet), `pitch-detection` (would suit a tuner or
   a note display, which is not built).
+- Local app (added after the original design): `desktop/` is a std-only Rust server with
+  `web/dist` embedded (`include_dir`), bound to 127.0.0.1:8766 (any free port if taken). It
+  injects a `gpitb-local` meta tag so the page sends a heartbeat; the hosted demo never does.
+  It exits 150 s after the last heartbeat. No Go, Electron or Tauri.
 

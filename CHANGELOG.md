@@ -21,3 +21,5 @@ This project is a thought experiment and proof of concept. Nothing here is a rel
 - Screenshots added under `docs/screenshots/`.
 - Song tools, in `dsp-core` on `rustfft`: tempo, first-beat and key estimation for loaded recordings (so the bar grid and Snap to bars work on your own files), an editable tempo with ½× / 2×, a click-track part, and a quick split into percussive, bass and harmonic parts that add back up to the original. The bar grid now honours a first-downbeat offset.
 - Security: `SECURITY.md`, weekly Dependabot updates (npm, cargo, pip, actions); on GitHub, secret scanning with push protection, private vulnerability reporting, CodeQL code scanning, and a ruleset protecting `main`.
+- Local app (`desktop/`, Rust): the built web app embedded in one program, served on 127.0.0.1 only (host check, GET only), opened in your browser, and stopped by a heartbeat timeout. `scripts/build.sh` makes the macOS `.app`; `scripts/build.ps1` makes the Windows `.exe`. CI runs both.
+- Docs: README cut down; detail moved to `docs/STATUS.md`.

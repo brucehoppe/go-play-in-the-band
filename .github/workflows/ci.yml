@@ -47,3 +47,12 @@ jobs:
       - name: Production build
         working-directory: web
         run: npm run build
+      - name: Local app tests
+        run: cargo test --manifest-path desktop/Cargo.toml
+      - name: Build the local app (macOS)
+        if: runner.os == 'macOS'
+        run: ./scripts/build.sh --skip-tests
+      - name: Build the local app (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/build.ps1 -SkipTests

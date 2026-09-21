@@ -26,3 +26,4 @@ This project is a thought experiment and proof of concept. Nothing here is a rel
 - Split buttons live in the YOUR PART card (Quick split, Instruments); no more "see the README".
 - Audio devices: choose the input (USB interface, Input 1 / Input 2 / both) and, in Chrome and Edge, the output (e.g. a USB headphone amp). Both inputs are now mixed to mono; before, only the left channel was recorded.
 - Playback tempo slider, 50 to 125% in 5% steps, showing the BPM you hear; the Song tempo box is labelled as describing the song, not changing playback.
+- Slow down to 25% (buttons for 25, 50, 75, 100% and the slider, now labelled "Slow down"). Solo button on every part, and "Solo guitar" on the guitar card; export follows solo too.

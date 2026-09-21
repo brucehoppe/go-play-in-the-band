@@ -7,6 +7,7 @@ import { sumMono } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
 import { fetchStem, separate, serverAvailable } from "./data/server";
 import { loadTakes, saveTake } from "./data/takes";
+import { isSilent } from "./lib/band";
 import { DEMO_INFO, DEMO_SECTIONS, GUITAR_STEM, synthDemoStems } from "./data/demo";
 import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
 import { makeClick } from "./lib/songtools";
@@ -41,6 +42,7 @@ export function App() {
   const [stemNames, setStemNames] = useState<string[]>([]);
   const [levels, setLevels] = useState<number[]>([]);
   const [muted, setMuted] = useState<boolean[]>([]);
+  const [solo, setSolo] = useState<number | null>(null);
   const monoRef = useRef<Float32Array | null>(null);
   const layersRef = useRef<{ band: Float32Array; guitar: Float32Array | null } | null>(null);
   const [speed, setSpeed] = useState(1);
@@ -143,6 +145,8 @@ export function App() {
       setStemNames(stems.map((s) => s.name));
       setLevels(stems.map(() => 100));
       setMuted(stems.map(() => false));
+    setSolo(null);
+      setSolo(null);
       setSections(songSections);
       setSpeed(1);
       setLoop(null);
@@ -185,14 +189,25 @@ export function App() {
     }, DEMO_SECTIONS);
 
   // Levels live here and reach the audio thread the moment they change.
+  // Mute and solo together decide what is silent; push every part so the audio always matches.
+  function pushGains(nextLevels: number[], nextMuted: boolean[], nextSolo: number | null) {
+    nextLevels.forEach((lv, k) => engine().setStemGain(k, lv / 100, isSilent(k, nextMuted, nextSolo)));
+  }
   function setLevel(i: number, level: number) {
-    setLevels((prev) => prev.map((v, k) => (k === i ? level : v)));
-    engine().setStemGain(i, level / 100, muted[i] ?? false);
+    const next = levels.map((v, k) => (k === i ? level : v));
+    setLevels(next);
+    engine().setStemGain(i, level / 100, isSilent(i, muted, solo));
   }
   function toggleMute(i: number) {
-    const next = !muted[i];
-    setMuted((prev) => prev.map((v, k) => (k === i ? next : v)));
-    engine().setStemGain(i, (levels[i] ?? 100) / 100, next);
+    const next = muted.map((v, k) => (k === i ? !v : v));
+    setMuted(next);
+    pushGains(levels, next, solo);
+  }
+  function toggleSolo(i: number) {
+    const next = solo === i ? null : i;
+    setSolo(next);
+    pushGains(levels, muted, next);
+    setStatus(next === null ? "Solo off: hearing every part again." : `Solo: hearing only ${stemNames[i]}. Slow it down with the tempo slider to pick the part out.`);
   }
 
   async function changeSpeed(next: number) {
@@ -287,6 +302,7 @@ export function App() {
     setStemNames(stems.map((s) => s.name));
     setLevels(stems.map(() => 100));
     setMuted(stems.map(() => false));
+    setSolo(null);
     setSpeed(1);
     setSong((cur) => (cur ? { ...cur, stemCount: stems.length } : cur));
   }
@@ -379,7 +395,7 @@ export function App() {
     const stems = stemsRef.current;
     if (stems.length === 0) return;
     const parts = stems.map((st) => sumMono([st.channels]));
-    const gains = stems.map((_, k) => (muted[k] ? 0 : (levels[k] ?? 100) / 100));
+    const gains = stems.map((_, k) => (isSilent(k, muted, solo) ? 0 : (levels[k] ?? 100) / 100));
     const wav = encodeWav(mixParts(parts, gains), engine().sampleRate);
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([wav], { type: "audio/wav" }));
@@ -389,7 +405,7 @@ export function App() {
   }
 
   const guitarIndex = stemNames.indexOf(GUITAR_STEM);
-  const guitarLevel = guitarIndex >= 0 && !muted[guitarIndex] ? (levels[guitarIndex] ?? 100) / 100 : 0;
+  const guitarLevel = guitarIndex >= 0 && !isSilent(guitarIndex, muted, solo) ? (levels[guitarIndex] ?? 100) / 100 : 0;
 
   const defaultLen = () => (song?.bpm && bpb ? (60 / song.bpm) * bpb : 4);
 
@@ -468,6 +484,8 @@ export function App() {
             guitar={guitarIndex}
             onLevel={setLevel}
             onMute={toggleMute}
+            solo={solo}
+            onSolo={toggleSolo}
             onQuickSplit={stemNames.includes("Full mix") ? () => void splitParts() : undefined}
             onStemSplit={() => void splitInstruments()}
             busy={busy || recording}

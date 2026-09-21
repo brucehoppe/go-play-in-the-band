@@ -106,3 +106,5 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .split-card .presets { display: flex; gap: 8px; flex-wrap: wrap; }
 .tempo-slider { display: grid; gap: 2px; font-size: 0.8rem; min-width: 150px; }
 .tempo-slider input { width: 100%; accent-color: var(--amber); }
+.speeds-label { font-size: 0.8rem; color: var(--text-2); margin-right: 2px; }
+.tempo-slider { min-width: 220px; }

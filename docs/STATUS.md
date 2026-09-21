@@ -10,7 +10,7 @@ A thought experiment and proof of concept. Expect rough edges.
 
 ## Not checked
 
-- Nothing has been judged by ear: stretch quality at 50% and 75%, the quick split, the click track.
+- Nothing has been judged by ear: stretch quality at 25%, 50% and 75% (25% is likely to sound grainy), the quick split, the click track.
 - No real microphone or USB interface (device picking was run against Chrome's fake devices): whether overdubs line up in time, and how good calibration is.
 - Tempo can be out by a factor of two; the first beat may not be beat one; 4/4 is assumed.
 - The Demucs backend has not been run on real audio.

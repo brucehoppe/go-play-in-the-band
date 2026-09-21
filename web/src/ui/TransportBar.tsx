@@ -5,6 +5,8 @@ interface Props {
   duration: number;
   playing: boolean;
   disabled: boolean;
+  /** Record works with nothing loaded: the first take becomes the song. */
+  canRecord: boolean;
   onToggle: () => void;
   onRewind: () => void;
   speed: number;
@@ -19,7 +21,7 @@ interface Props {
 
 const SPEEDS = [0.5, 0.75, 0.9, 1];
 
-export function TransportBar({ position, duration, playing, disabled, onToggle, onRewind, speed, preparing, onSpeed, recording, hasTake, onRecord, onExport, onCalibrate }: Props) {
+export function TransportBar({ position, duration, playing, disabled, canRecord, onToggle, onRewind, speed, preparing, onSpeed, recording, hasTake, onRecord, onExport, onCalibrate }: Props) {
   return (
     <footer className="transport">
       <div className="time" aria-live="off">
@@ -29,11 +31,11 @@ export function TransportBar({ position, duration, playing, disabled, onToggle, 
       <button className="play" disabled={disabled} onClick={onToggle} aria-label={playing ? "Pause" : "Play"}>
         {playing ? "❚❚" : "▶"}
       </button>
-      <button disabled={disabled} aria-pressed={recording} className={recording ? "on" : ""} onClick={onRecord}>
+      <button disabled={!canRecord} aria-pressed={recording} className={recording ? "on" : ""} onClick={onRecord}>
         {recording ? "■ Stop take" : "● Record"}
       </button>
       <button disabled={disabled || recording} onClick={onCalibrate}>Calibrate</button>
-      <button disabled={!hasTake || recording} onClick={onExport}>Export WAV</button>
+      <button disabled={!hasTake || recording} onClick={onExport}>Export mix</button>
       <div className="speeds" role="group" aria-label="Speed">
         {SPEEDS.map((v) => (
           <button

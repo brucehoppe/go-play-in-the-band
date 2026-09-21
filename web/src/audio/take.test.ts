@@ -47,3 +47,23 @@ describe("measureLatency", () => {
     expect(measureLatency(new Float32Array(100), 0)).toBe(0);
   });
 });
+
+import { mixParts, placeTake } from "./take";
+describe("placeTake", () => {
+  it("puts the take at its start frame and keeps the song length", () => {
+    expect(Array.from(placeTake(Float32Array.of(1, 2, 3), 2, 4))).toEqual([0, 0, 1, 2]);
+  });
+  it("grows to fit when there is no song yet", () => {
+    expect(Array.from(placeTake(Float32Array.of(1, 2), 1, 0))).toEqual([0, 1, 2]);
+  });
+  it("survives a start beyond the end", () => {
+    expect(Array.from(placeTake(Float32Array.of(1), 9, 2))).toEqual([0, 0]);
+  });
+});
+describe("mixParts", () => {
+  it("applies levels, skips silent parts, and never clips", () => {
+    const m = mixParts([Float32Array.of(0.5, 1), Float32Array.of(0.5, 1), Float32Array.of(9, 9)], [1, 1, 0]);
+    expect(m[0]).toBeCloseTo(MIX_HEADROOM);
+    expect(m[1]).toBeLessThanOrEqual(1);
+  });
+});

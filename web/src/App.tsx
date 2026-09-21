@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Engine } from "./audio/engine";
-import { alignTake, encodeWav, mixTakeWithBand } from "./audio/take";
+import { alignTake, encodeWav, mixParts, placeTake } from "./audio/take";
 import type { Recorder } from "./audio/recorder";
 import { sumMono } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
 import { fetchStem, separate, serverAvailable } from "./data/server";
-import { loadTake, saveTake } from "./data/takes";
+import { loadTakes, saveTake } from "./data/takes";
 import { DEMO_INFO, DEMO_SECTIONS, GUITAR_STEM, synthDemoStems } from "./data/demo";
 import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
 import { loopName, setIn, setOut } from "./lib/loop";
@@ -40,7 +40,9 @@ export function App() {
   const [speed, setSpeed] = useState(1);
   const [preparing, setPreparing] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [take, setTake] = useState<Float32Array | null>(null);
+  const stemsRef = useRef<Stem[]>([]);
+  const takeCountRef = useRef(0);
+  const recordFromRef = useRef(0);
   const [latency, setLatency] = useState(() => {
     try {
       const v = Number(localStorage.getItem("gpitb:latency"));
@@ -82,11 +84,24 @@ export function App() {
     if (announce) announceLoop(l);
   }
 
+  /** Rebuild the waveform layers and overview from the current parts. */
+  async function refreshViews(stems: Stem[]) {
+    stemsRef.current = stems;
+    const gi = stems.findIndex((s) => s.name === GUITAR_STEM);
+    const band = sumMono(stems.filter((_, k) => k !== gi).map((s) => s.channels));
+    const guitar = gi >= 0 ? sumMono([stems[gi].channels]) : null;
+    layersRef.current = { band, guitar };
+    const mono = guitar ? band.map((v, k) => v + guitar[k]) : band;
+    monoRef.current = mono;
+    setPeaks(await computePeaks(mono.slice(), PEAK_BUCKETS));
+  }
+
   async function open(
     name: string,
     getStems: (e: Engine) => Promise<Stem[]>,
     meta: Meta,
     songSections: Section[] = [],
+    restoreTakes = true,
   ) {
     setBusy(true);
     setError(null);
@@ -95,17 +110,13 @@ export function App() {
       await e.init();
       e.pause();
       const stems = await getStems(e);
+      // Takes recorded over this song earlier come back as parts.
+      const saved = restoreTakes ? await loadTakes(name) : [];
+      takeCountRef.current = saved.length;
+      const length = stems[0].channels[0].length;
+      saved.forEach((t, k) => stems.push({ name: `Take ${k + 1}`, channels: [placeTake(t, 0, length)] }));
       e.load(stems);
-      const gi = stems.findIndex((s) => s.name === GUITAR_STEM);
-      const band = sumMono(stems.filter((_, k) => k !== gi).map((s) => s.channels));
-      const guitar = gi >= 0 ? sumMono([stems[gi].channels]) : null;
-      layersRef.current = { band, guitar };
-      const mono = guitar ? band.map((v, k) => v + guitar[k]) : band;
-      monoRef.current = mono;
-      const overview = await computePeaks(mono.slice(), PEAK_BUCKETS);
-      setPeaks(overview);
-      setTake(null);
-      void loadTake(`take:${name}`).then((t) => t && setTake(t));
+      await refreshViews(stems);
       setSong({ name, duration: stems[0].channels[0].length / e.sampleRate, ...meta, stemCount: stems.length });
       setStemNames(stems.map((s) => s.name));
       setLevels(stems.map(() => 100));
@@ -170,25 +181,51 @@ export function App() {
     }
   }
 
+  // Each take becomes another part in the mixer, so you can keep recording on top (overdub).
   async function toggleRecord() {
     try {
+      const e = engine();
+      await e.init();
       if (!recording) {
-        const e = engine();
-        await e.init();
+        if (speed !== 1) {
+          setStatus("Set the speed to 100% to record a take.");
+          return;
+        }
         const r = e.recorder();
         await r.start();
         recorderRef.current = r;
+        recordFromRef.current = song ? position : 0;
         setRecording(true);
-        await e.play();
-      } else {
-        engine().pause();
-        const raw = await recorderRef.current!.stop();
-        setRecording(false);
-        const aligned = alignTake(raw, latency);
-        setTake(aligned);
-        void saveTake(`take:${song?.name ?? "song"}`, aligned);
-        setStatus("Take recorded. Export it with the band.");
+        if (song) await e.play();
+        return;
       }
+      e.pause();
+      const raw = await recorderRef.current!.stop();
+      setRecording(false);
+      const aligned = alignTake(raw, latency);
+      if (aligned.length === 0) return;
+      const n = takeCountRef.current + 1;
+      if (!song) {
+        // Nothing loaded: this take is the song, and the next takes go on top of it.
+        await open("My recording", async () => [{ name: "Take 1", channels: [aligned] }], UNKNOWN, [], false);
+        takeCountRef.current = 1;
+        void saveTake("take:My recording:1", aligned);
+        setStatus("Take 1 recorded. Press Record again to overdub. Use headphones so the band is not re-recorded.");
+        return;
+      }
+      const length = stemsRef.current[0].channels[0].length;
+      const placed = placeTake(aligned, recordFromRef.current * e.sampleRate, length);
+      const stem: Stem = { name: `Take ${n}`, channels: [placed] };
+      await e.addStem(stem);
+      e.seek(recordFromRef.current);
+      takeCountRef.current = n;
+      void saveTake(`take:${song.name}:${n}`, placed);
+      await refreshViews([...stemsRef.current, stem]);
+      setStemNames((p) => [...p, stem.name]);
+      setLevels((p) => [...p, 100]);
+      setMuted((p) => [...p, false]);
+      setSong({ ...song, stemCount: song.stemCount + 1 });
+      setStatus(`Take ${n} recorded as a new part. Press Record again to overdub.`);
     } catch {
       setRecording(false);
       setError("Could not use the microphone. Allow access and try again.");
@@ -213,13 +250,16 @@ export function App() {
     }
   }
 
+  /** Export what you hear: every part at its level, muted parts left out. */
   function exportTake() {
-    if (!take || !monoRef.current) return;
-    const sr = engine().sampleRate;
-    const wav = encodeWav(mixTakeWithBand(monoRef.current, take), sr);
+    const stems = stemsRef.current;
+    if (stems.length === 0) return;
+    const parts = stems.map((st) => sumMono([st.channels]));
+    const gains = stems.map((_, k) => (muted[k] ? 0 : (levels[k] ?? 100) / 100));
+    const wav = encodeWav(mixParts(parts, gains), engine().sampleRate);
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([wav], { type: "audio/wav" }));
-    a.download = "take-with-band.wav";
+    a.download = "mix.wav";
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -295,13 +335,14 @@ export function App() {
         duration={song?.duration ?? 0}
         playing={playing}
         disabled={!song || busy}
+        canRecord={!busy}
         onToggle={() => (playing ? engine().pause() : void engine().play())}
         onRewind={() => engine().seek(0)}
         speed={speed}
         preparing={preparing}
         onSpeed={changeSpeed}
         recording={recording}
-        hasTake={take !== null}
+        hasTake={song !== null}
         onRecord={toggleRecord}
         onExport={exportTake}
         onCalibrate={calibrate}

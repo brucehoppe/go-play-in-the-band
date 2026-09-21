@@ -101,4 +101,7 @@ this section records where the build differs from it.
   estimation is not built. Demucs and librosa are optional installs.
 - Not verified: quality by ear, a real microphone, real separation output, Windows by hand.
 - The seven-step brief is not in the repo, so steps 3b to 7 are inferred from this spec.
+- Overdub (added after the original design): a take is placed on the song timeline at the
+  position recording started and added as a mono stem, reusing the multi-stem mixer. Takes
+  recorded while a loop wraps are laid out linearly, not folded back onto the loop.
 

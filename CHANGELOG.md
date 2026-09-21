@@ -23,3 +23,6 @@ This project is a thought experiment and proof of concept. Nothing here is a rel
 - Security: `SECURITY.md`, weekly Dependabot updates (npm, cargo, pip, actions); on GitHub, secret scanning with push protection, private vulnerability reporting, CodeQL code scanning, and a ruleset protecting `main`.
 - Local app (`desktop/`, Rust): the built web app embedded in one program, served on 127.0.0.1 only (host check, GET only), opened in your browser, and stopped by a heartbeat timeout. `scripts/build.sh` makes the macOS `.app`; `scripts/build.ps1` makes the Windows `.exe`. CI runs both.
 - Docs: README cut down; detail moved to `docs/STATUS.md`.
+- Split buttons live in the YOUR PART card (Quick split, Instruments); no more "see the README".
+- Audio devices: choose the input (USB interface, Input 1 / Input 2 / both) and, in Chrome and Edge, the output (e.g. a USB headphone amp). Both inputs are now mixed to mono; before, only the left channel was recorded.
+- Playback tempo slider, 50 to 125% in 5% steps, showing the BPM you hear; the Song tempo box is labelled as describing the song, not changing playback.

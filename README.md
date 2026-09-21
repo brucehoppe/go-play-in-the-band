@@ -19,10 +19,11 @@ More screenshots: [docs/screenshots](docs/screenshots).
 - **Play**: load WAV, MP3, FLAC or M4A; whole-song waveform; click to seek.
 - **Loop**: drag IN/OUT, snap to bars, sample-accurate with a crossfade.
 - **Mix**: a fader and mute per part; Mute / Quiet guide / Full presets for the guitar.
-- **Speed**: 50, 75, 90 or 100% at the same pitch (our own WSOLA stretcher).
+- **Tempo**: a slider from 50 to 125% at the same pitch (our own WSOLA stretcher), with the BPM you hear.
 - **Record and overdub**: each take becomes a new part; Record with nothing loaded starts a song.
+- **Audio devices**: record from a USB interface (Input 1, 2 or both); play through a USB headphone amp.
 - **Song tools**: estimated tempo, first beat and key; editable tempo; click track.
-- **Quick split**: drums-like, low bass and everything else. Not single instruments; that needs the backend.
+- **Split**: right in the band panel. Quick split (drums-like, low bass, the rest) works anywhere; Instruments needs the backend.
 - **Export mix**: what you hear, as a WAV.
 - **Private**: nothing you load leaves your computer. Works offline after one visit.
 

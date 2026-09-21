@@ -219,6 +219,15 @@ mod stretch_tests {
     }
 
     #[test]
+    fn faster_than_original_shortens_and_keeps_pitch() {
+        let x = sine(220.0, 44100.0, 1.0);
+        let y = stretch(&x, 1.25, 2048, 512);
+        assert_eq!(y.len(), 35280);
+        let f_out = zero_crossings(&y) as f32 / (y.len() as f32 / 44100.0);
+        assert!((220.0 - f_out).abs() / 220.0 < 0.02, "{f_out}");
+    }
+
+    #[test]
     fn unity_and_empty_are_identity() {
         let x = sine(220.0, 44100.0, 0.1);
         assert_eq!(stretch(&x, 1.0, 2048, 512), x);

@@ -52,3 +52,22 @@ export function measureLatency(recorded: Float32Array, clickFrame: number): numb
   }
   return peak < 0.05 ? 0 : Math.max(0, at - clickFrame);
 }
+
+/** Place an aligned take on the song's timeline: silence up to `startFrame`, then the take. `length` 0 means "as long as needed". */
+export function placeTake(take: Float32Array, startFrame: number, length: number): Float32Array {
+  const start = Math.max(0, Math.round(startFrame));
+  const out = new Float32Array(length > 0 ? length : start + take.length);
+  out.set(take.subarray(0, Math.max(0, out.length - start)), Math.min(start, out.length));
+  return out;
+}
+
+/** Mono mixdown of several parts at their levels (0..1), with headroom, limited to +-1. */
+export function mixParts(parts: Float32Array[], levels: number[]): Float32Array {
+  const out = new Float32Array(parts.reduce((n, p) => Math.max(n, p.length), 0));
+  parts.forEach((p, k) => {
+    const g = levels[k] ?? 1;
+    if (g > 0) for (let i = 0; i < p.length; i++) out[i] += p[i] * g;
+  });
+  for (let i = 0; i < out.length; i++) out[i] = Math.max(-1, Math.min(1, out[i] * MIX_HEADROOM));
+  return out;
+}

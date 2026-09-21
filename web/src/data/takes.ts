@@ -38,3 +38,14 @@ export async function loadTake(key: string): Promise<Float32Array | null> {
     return null;
   }
 }
+
+/** Every stored take for a song, in order. Stops at the first gap. */
+export async function loadTakes(song: string): Promise<Float32Array[]> {
+  const out: Float32Array[] = [];
+  for (let i = 1; i <= 32; i++) {
+    const t = await loadTake(`take:${song}:${i}`);
+    if (!t) break;
+    out.push(t);
+  }
+  return out;
+}

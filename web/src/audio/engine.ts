@@ -58,6 +58,17 @@ export class Engine {
   /** Re-render every stem at `speed` (0.5..1) and swap it in, keeping position, loop, gains and play state. */
   async setSpeed(speed: number): Promise<void> {
     if (speed === this.speed || this.source.length === 0) return;
+    await this.render(speed);
+  }
+
+  /** Add a part (an overdub take) on top of what is loaded, keeping position, loop, gains and speed. */
+  async addStem(stem: Stem): Promise<void> {
+    this.source = [...this.source, stem];
+    this.gains.push({ level: 1, muted: false });
+    await this.render(this.speed);
+  }
+
+  private async render(speed: number): Promise<void> {
     const wasPlaying = this.playing;
     const at = (this.lastFrame / this.ctx.sampleRate) * this.speed;
     this.pause();

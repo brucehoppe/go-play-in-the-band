@@ -85,7 +85,7 @@ export function BandMixer({
         <div className="your-part disabled" aria-disabled="true">
           <p className="part-tag">YOUR PART</p>
           <p className="hint">
-            Stem separation needs the local backend (coming in the next step)
+            To split a recording into parts, run the optional local backend (see the README)
           </p>
         </div>
       )}

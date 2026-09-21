@@ -16,3 +16,6 @@ This project is a thought experiment and proof of concept. Nothing here is a rel
 - Service worker caches the demo for offline use; installer and run scripts for the backend (macOS and Windows).
 - Stretcher match search made about 8x faster (a 4-minute song stretches in roughly 1 to 1.5 s natively).
 - Docs: README marked as a thought-experiment POC, with what is and is not verified.
+- Overdub: each recorded take becomes a new mixer part; Record with nothing loaded starts a song from your first take; "Export mix" exports every part at its level. Takes for a song are restored on reopen.
+- Live demo fixed: the Pages deploy job now has `contents: read`; Pages enabled for the repository.
+- Screenshots added under `docs/screenshots/`.

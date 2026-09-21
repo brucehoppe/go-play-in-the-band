@@ -18,7 +18,12 @@ against the rest of the band, so you feel like the guitarist in the band.
 
 ![The demo song loaded: whole-song waveform with section chips, a four-bar loop, the band mixer with the guitar muted, and the speed set to 75%](docs/screenshots/03-loop-mute-75.png)
 
-More: [start screen](docs/screenshots/01-start.png), [demo loaded](docs/screenshots/02-demo-loaded.png).
+Your own recording, loaded as a single "Full mix" (no backend needed):
+
+![One of the author's own recordings loaded: a four-minute waveform with the playhead partway in, the loop panel, a single Full mix fader, and the transport with Record, Calibrate, Export mix and the speed buttons](docs/screenshots/05-own-recording.png)
+
+More: [start screen](docs/screenshots/01-start.png), [demo loaded](docs/screenshots/02-demo-loaded.png),
+[a recorded take as a new part](docs/screenshots/04-overdub-take.png).
 
 ## Status
 
@@ -33,9 +38,14 @@ What exists so far:
   presets. Gain changes are smoothed over about 10 ms, so they never click.
 - **Speed.** 50, 75, 90 or 100%. Each speed is pre-rendered by our own WSOLA time-stretcher
   (Rust/WASM, in a worker), so playback stays exact. The first switch shows "Preparing…".
-- **Record and export.** Record a take from the microphone (raw, no processing) against the
-  band, saved in your browser (IndexedDB). Export the take mixed with the band as a WAV.
-  A Calibrate button measures round-trip latency with a click.
+- **Record and overdub.** Record a take from the microphone (raw, no processing). Each take
+  becomes a new part in the mixer ("Take 1", "Take 2", …) with its own fader and mute, so you
+  can keep recording on top. With nothing loaded, Record makes your first take the song and
+  later takes layer over it. Takes are saved in your browser (IndexedDB) and come back when
+  you reopen the same song. Recording works at 100% speed. Use headphones, or the mic
+  re-records the band. A Calibrate button measures round-trip latency with a click.
+- **Export.** "Export mix" writes what you hear (every part at its level, mutes respected)
+  as a WAV, with headroom so it does not clip.
 - **Optional local backend** (`server/`). If it is running, opening a file splits it into
   parts with Demucs; without it a file is a single "Full mix". The demo needs no backend.
 - **Offline.** A service worker caches the demo after the first visit.
@@ -43,7 +53,8 @@ What exists so far:
 What has **not** been verified:
 
 - Stretch quality on guitar at 50% and 75% has not been judged by ear.
-- Recording and calibration have only been run with a fake microphone.
+- Recording, overdubbing and calibration have only been run with a fake microphone, so
+  whether layers line up in time on real hardware is unknown.
 - Stem separation has not been run against real Demucs output.
 - Windows is checked in CI only, not by hand.
 

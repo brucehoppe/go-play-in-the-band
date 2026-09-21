@@ -1,4 +1,5 @@
 import bandWorkletUrl from "./band.worklet.ts?worker&url";
+import { Recorder } from "./recorder";
 import { stretchChannels } from "./stretch";
 import type { Stem } from "../types";
 import type { BandCommand, BandEvent } from "./band.worklet";
@@ -79,6 +80,10 @@ export class Engine {
   setStemGain(stem: number, level: number, muted: boolean): void {
     this.gains[stem] = { level, muted };
     this.send({ type: "gain", stem, level, muted });
+  }
+
+  recorder(): Recorder {
+    return new Recorder(this.ctx);
   }
 
   async play(): Promise<void> {

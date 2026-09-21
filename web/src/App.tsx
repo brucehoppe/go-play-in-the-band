@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Engine } from "./audio/engine";
+import { alignTake, encodeWav, mixTakeWithBand } from "./audio/take";
+import type { Recorder } from "./audio/recorder";
 import { sumMono } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
 import { DEMO_INFO, DEMO_SECTIONS, GUITAR_STEM, synthDemoStems } from "./data/demo";
@@ -35,6 +37,9 @@ export function App() {
   const layersRef = useRef<{ band: Float32Array; guitar: Float32Array | null } | null>(null);
   const [speed, setSpeed] = useState(1);
   const [preparing, setPreparing] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [take, setTake] = useState<Float32Array | null>(null);
+  const recorderRef = useRef<Recorder | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,6 +143,40 @@ export function App() {
     }
   }
 
+  async function toggleRecord() {
+    try {
+      if (!recording) {
+        const e = engine();
+        await e.init();
+        const r = e.recorder();
+        await r.start();
+        recorderRef.current = r;
+        setRecording(true);
+        await e.play();
+      } else {
+        engine().pause();
+        const raw = await recorderRef.current!.stop();
+        setRecording(false);
+        setTake(alignTake(raw, 0));
+        setStatus("Take recorded. Export it with the band.");
+      }
+    } catch {
+      setRecording(false);
+      setError("Could not use the microphone. Allow access and try again.");
+    }
+  }
+
+  function exportTake() {
+    if (!take || !monoRef.current) return;
+    const sr = engine().sampleRate;
+    const wav = encodeWav(mixTakeWithBand(monoRef.current, take), sr);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([wav], { type: "audio/wav" }));
+    a.download = "take-with-band.wav";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   const guitarIndex = stemNames.indexOf(GUITAR_STEM);
   const guitarLevel = guitarIndex >= 0 && !muted[guitarIndex] ? (levels[guitarIndex] ?? 100) / 100 : 0;
 
@@ -214,6 +253,10 @@ export function App() {
         speed={speed}
         preparing={preparing}
         onSpeed={changeSpeed}
+        recording={recording}
+        hasTake={take !== null}
+        onRecord={toggleRecord}
+        onExport={exportTake}
       />
     </div>
   );

@@ -25,3 +25,24 @@ describe("sumMono", () => {
     expect(sumMono([]).length).toBe(0);
   });
 });
+
+import { waveLayers } from "./mono";
+describe("waveLayers", () => {
+  const g = { name: "guitar", channels: [Float32Array.of(0.5, -0.5, 0.25)] };
+  const b = { name: "bass", channels: [Float32Array.of(0.1, 0.1, 0.1)] };
+  it("a guitar-only song still has a full-length waveform", () => {
+    const { band, guitar, mono } = waveLayers([g], "guitar");
+    expect(Array.from(band)).toEqual([0, 0, 0]);
+    expect(Array.from(guitar!)).toEqual([0.5, -0.5, 0.25]);
+    expect(Array.from(mono)).toEqual([0.5, -0.5, 0.25]);
+  });
+  it("sums the band and keeps the guitar apart", () => {
+    const { band, guitar, mono } = waveLayers([g, b], "guitar");
+    expect(band[0]).toBeCloseTo(0.1);
+    expect(guitar![0]).toBeCloseTo(0.5);
+    expect(mono[0]).toBeCloseTo(0.6);
+  });
+  it("no guitar part means no guitar layer", () => {
+    expect(waveLayers([b], "guitar").guitar).toBeNull();
+  });
+});

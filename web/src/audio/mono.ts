@@ -20,3 +20,17 @@ export function sumMono(stems: Float32Array[][]): Float32Array {
   }
   return out;
 }
+
+/**
+ * The two waveform layers: everything except the guitar ("band"), and the guitar on its own.
+ * Both are as long as the song even when one side is empty, e.g. a recording that is only guitar.
+ */
+export function waveLayers(stems: { name: string; channels: Float32Array[] }[], guitarName: string): { band: Float32Array; guitar: Float32Array | null; mono: Float32Array } {
+  const length = stems[0]?.channels[0]?.length ?? 0;
+  const gi = stems.findIndex((s) => s.name === guitarName);
+  const others = stems.filter((_, k) => k !== gi).map((s) => s.channels);
+  const band = others.length ? sumMono(others) : new Float32Array(length);
+  const guitar = gi >= 0 ? sumMono([stems[gi].channels]) : null;
+  const mono = guitar ? band.map((v, k) => v + (guitar[k] ?? 0)) : band;
+  return { band, guitar, mono };
+}

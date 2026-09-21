@@ -23,7 +23,7 @@ export function Header({ song, busy, onPickFile, onLoadDemo }: Props) {
           <span>BPM <span className="mono">{dash(song.bpm)}</span></span>
           <span>Time <span className="mono">{dash(song.timeSig)}</span></span>
           <span>Key {dash(song.key)}</span>
-          <span>{song.stemCount} part{song.stemCount === 1 ? " (full mix)" : "s"}</span>
+          <span>{song.stemCount} part{song.stemCount === 1 ? "" : "s"}{song.fullMix ? " (full mix)" : ""}</span>
         </div>
       )}
       <input

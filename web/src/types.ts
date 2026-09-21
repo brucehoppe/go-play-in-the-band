@@ -5,6 +5,8 @@ export interface SongInfo {
   timeSig: string | null;
   key: string | null;
   stemCount: number;
+  /** True when the song is one unsplit mix, not separated parts. */
+  fullMix?: boolean;
   /** Seconds to the start of bar 1. 0 unless detected. */
   downbeat?: number;
   /** True when tempo and key were estimated from the audio rather than known. */

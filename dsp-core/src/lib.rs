@@ -91,3 +91,125 @@ mod tests {
         assert!(start < end && end == n);
     }
 }
+
+/// WSOLA time-stretch of a mono signal. `ratio` is playback speed: 0.5 gives output twice as
+/// long at the same pitch. Frames of `frame` samples are overlap-added at a fixed synthesis hop,
+/// and each analysis position is nudged by up to `seek` samples to the best waveform match.
+pub fn stretch(input: &[f32], ratio: f32, frame: usize, seek: usize) -> Vec<f32> {
+    let n = input.len();
+    if n == 0 || !(ratio > 0.0) || frame < 4 {
+        return input.to_vec();
+    }
+    if (ratio - 1.0).abs() < 1e-6 {
+        return input.to_vec();
+    }
+    let hop = frame / 2;
+    let out_len = (n as f64 / ratio as f64).round() as usize;
+    let win: Vec<f32> = (0..frame)
+        .map(|i| 0.5 - 0.5 * (2.0 * std::f32::consts::PI * (i as f32 + 0.5) / frame as f32).cos())
+        .collect();
+    let mut out = vec![0.0f32; out_len + frame];
+    let mut norm = vec![0.0f32; out_len + frame];
+    // The natural continuation of the previous frame, used as the match target.
+    let mut target: Vec<f32> = input[..frame.min(n)].to_vec();
+    target.resize(frame, 0.0);
+    let mut pos = 0usize;
+    let mut k = 0usize;
+    while pos < out_len {
+        let centre = (k as f64 * hop as f64 * ratio as f64) as isize;
+        let mut best = centre.clamp(0, n as isize - 1);
+        if k > 0 {
+            let lo = (centre - seek as isize).max(0);
+            let hi = (centre + seek as isize).min(n as isize - 1);
+            let mut best_score = f32::NEG_INFINITY;
+            let mut c = lo;
+            while c <= hi {
+                let mut s = 0.0f32;
+                for i in (0..frame).step_by(2) {
+                    let idx = c as usize + i;
+                    if idx < n {
+                        s += input[idx] * target[i];
+                    }
+                }
+                if s > best_score {
+                    best_score = s;
+                    best = c;
+                }
+                c += 1;
+            }
+        }
+        let b = best as usize;
+        for i in 0..frame {
+            let x = if b + i < n { input[b + i] } else { 0.0 };
+            out[pos + i] += x * win[i];
+            norm[pos + i] += win[i];
+        }
+        // Next target: what followed this frame in the source.
+        for i in 0..frame {
+            let idx = b + hop + i;
+            target[i] = if idx < n { input[idx] } else { 0.0 };
+        }
+        pos += hop;
+        k += 1;
+    }
+    out.truncate(out_len);
+    for (o, w) in out.iter_mut().zip(norm.iter()) {
+        if *w > 1e-6 {
+            *o /= *w;
+        }
+    }
+    out
+}
+
+/// Browser entry point: `stretch_mono(Float32Array, speed) -> Float32Array`.
+#[wasm_bindgen]
+pub fn stretch_mono(samples: &[f32], speed: f32, sample_rate: f32) -> Vec<f32> {
+    let frame = ((sample_rate * 0.04) as usize).next_power_of_two().max(256);
+    stretch(samples, speed, frame, frame / 4)
+}
+
+#[cfg(test)]
+mod stretch_tests {
+    use super::*;
+
+    fn sine(freq: f32, sr: f32, secs: f32) -> Vec<f32> {
+        (0..(sr * secs) as usize)
+            .map(|i| (2.0 * std::f32::consts::PI * freq * i as f32 / sr).sin() * 0.5)
+            .collect()
+    }
+
+    fn zero_crossings(x: &[f32]) -> usize {
+        x.windows(2).filter(|w| w[0] <= 0.0 && w[1] > 0.0).count()
+    }
+
+    #[test]
+    fn half_speed_doubles_length() {
+        let x = sine(220.0, 44100.0, 1.0);
+        let y = stretch(&x, 0.5, 2048, 512);
+        assert_eq!(y.len(), 88200);
+    }
+
+    #[test]
+    fn pitch_is_preserved() {
+        let x = sine(220.0, 44100.0, 1.0);
+        let y = stretch(&x, 0.75, 2048, 512);
+        let f_in = zero_crossings(&x) as f32 / 1.0;
+        let f_out = zero_crossings(&y) as f32 / (y.len() as f32 / 44100.0);
+        assert!((f_in - f_out).abs() / f_in < 0.02, "{f_in} vs {f_out}");
+    }
+
+    #[test]
+    fn unity_and_empty_are_identity() {
+        let x = sine(220.0, 44100.0, 0.1);
+        assert_eq!(stretch(&x, 1.0, 2048, 512), x);
+        assert!(stretch(&[], 0.5, 2048, 512).is_empty());
+    }
+
+    #[test]
+    fn amplitude_is_stable() {
+        let x = sine(220.0, 44100.0, 1.0);
+        let y = stretch(&x, 0.5, 2048, 512);
+        let peak = y[4096..y.len() - 4096].iter().fold(0.0f32, |m, v| m.max(v.abs()));
+        assert!(peak > 0.45 && peak < 0.55, "{peak}");
+    }
+}

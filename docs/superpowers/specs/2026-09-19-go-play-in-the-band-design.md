@@ -83,3 +83,22 @@ thread (target under 3 s for 4 minutes), whole-song waveform with playhead and
 click-to-seek, play/pause through the band worklet, header file card, demo-mode
 stub and Pages workflow. Tests cover peaks and clock logic. Check in a real browser
 for console errors. Then pause for review.
+
+## As built (proof of concept)
+
+This project is a thought experiment and proof of concept. The design above is the intent;
+this section records where the build differs from it.
+
+- Built: steps 1 to 3a, time-stretch (speed 50/75/90/100%), recording, latency calibration,
+  WAV export of a take with the band, the optional backend, a service worker, installer scripts.
+- Speed pre-renders the whole song per speed, not only the loop plus padding; it is fast
+  enough (a few seconds for four minutes) and simpler. Each channel is stretched on its own.
+- The stretcher's match search is coarse (every 2nd candidate, every 8th sample) for speed.
+  Its effect on guitar quality is unheard.
+- Takes are stored whole in IndexedDB, not streamed in chunks. Take export is WAV only; the
+  lamejs MP3 encoder is not ported.
+- The backend has `/health`, `/analyse` (tempo), `/separate` and `/stems/...`. Section
+  estimation is not built. Demucs and librosa are optional installs.
+- Not verified: quality by ear, a real microphone, real separation output, Windows by hand.
+- The seven-step brief is not in the repo, so steps 3b to 7 are inferred from this spec.
+

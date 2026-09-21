@@ -11,3 +11,10 @@ every build.
 | Bricolage Grotesque | headings | `@fontsource-variable/bricolage-grotesque` |
 | IBM Plex Sans | interface text | `@fontsource/ibm-plex-sans` |
 | IBM Plex Mono | times and numbers | `@fontsource/ibm-plex-mono` |
+
+## Optional backend dependencies
+
+The local backend (`server/`) uses FastAPI and Uvicorn. Stem separation and tempo
+detection use Demucs and librosa, which are installed separately by the user and are not
+bundled or distributed with this project. Check their own licences before redistributing
+anything built with them.

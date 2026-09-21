@@ -1,5 +1,7 @@
 # Step 1: Load, Waveform, Play/Pause: Implementation Plan
 
+> Historical: this plan was executed. Later steps have no separate plans; see the "As built" section of the design spec.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A user can load an audio file (or a built-in demo song), see the whole song as a waveform computed in Rust/WASM, click to seek, and play/pause through an AudioWorklet, with the demo running as static files on GitHub Pages.

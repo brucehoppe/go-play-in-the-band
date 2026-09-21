@@ -14,6 +14,12 @@ A play-along practice app for guitarists. Load a recording, turn the original gu
 down or out, loop a hard section, slow it down, and record yourself playing the part
 against the rest of the band, so you feel like the guitarist in the band.
 
+## Screenshots
+
+![The demo song loaded: whole-song waveform with section chips, a four-bar loop, the band mixer with the guitar muted, and the speed set to 75%](docs/screenshots/03-loop-mute-75.png)
+
+More: [start screen](docs/screenshots/01-start.png), [demo loaded](docs/screenshots/02-demo-loaded.png).
+
 ## Status
 
 What exists so far:

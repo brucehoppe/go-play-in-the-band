@@ -33,6 +33,8 @@ export function App() {
   const [muted, setMuted] = useState<boolean[]>([]);
   const monoRef = useRef<Float32Array | null>(null);
   const layersRef = useRef<{ band: Float32Array; guitar: Float32Array | null } | null>(null);
+  const [speed, setSpeed] = useState(1);
+  const [preparing, setPreparing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,6 +94,7 @@ export function App() {
       setLevels(stems.map(() => 100));
       setMuted(stems.map(() => false));
       setSections(songSections);
+      setSpeed(1);
       setLoop(null);
       setLooping(false);
       setStatus("");
@@ -121,6 +124,18 @@ export function App() {
     const next = !muted[i];
     setMuted((prev) => prev.map((v, k) => (k === i ? next : v)));
     engine().setStemGain(i, (levels[i] ?? 100) / 100, next);
+  }
+
+  async function changeSpeed(next: number) {
+    setPreparing(true);
+    setSpeed(next);
+    try {
+      await engine().setSpeed(next);
+    } catch {
+      setError("Could not change the speed.");
+    } finally {
+      setPreparing(false);
+    }
   }
 
   const guitarIndex = stemNames.indexOf(GUITAR_STEM);
@@ -196,6 +211,9 @@ export function App() {
         disabled={!song || busy}
         onToggle={() => (playing ? engine().pause() : void engine().play())}
         onRewind={() => engine().seek(0)}
+        speed={speed}
+        preparing={preparing}
+        onSpeed={changeSpeed}
       />
     </div>
   );

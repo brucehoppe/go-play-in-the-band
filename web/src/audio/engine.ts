@@ -1,4 +1,5 @@
 import bandWorkletUrl from "./band.worklet.ts?worker&url";
+import { stretchChannels } from "./stretch";
 import type { Stem } from "../types";
 import type { BandCommand, BandEvent } from "./band.worklet";
 
@@ -6,6 +7,14 @@ export class Engine {
   private ctx = new AudioContext({ latencyHint: "interactive" });
   private node: AudioWorkletNode | null = null;
 
+  private source: Stem[] = [];
+  private speed = 1;
+  private gains: { level: number; muted: boolean }[] = [];
+  private loopSec: [number, number] | null = null;
+  private lastFrame = 0;
+  private playing = false;
+
+  /** Position is always reported in source-song seconds, whatever the speed. */
   onPosition: (seconds: number, playing: boolean) => void = () => {};
 
   get sampleRate(): number {
@@ -17,8 +26,11 @@ export class Engine {
     await this.ctx.audioWorklet.addModule(bandWorkletUrl);
     const node = new AudioWorkletNode(this.ctx, "band-processor", { outputChannelCount: [2] });
     node.connect(this.ctx.destination);
-    node.port.onmessage = (e: MessageEvent<BandEvent>) =>
-      this.onPosition(e.data.frame / this.ctx.sampleRate, e.data.playing);
+    node.port.onmessage = (e: MessageEvent<BandEvent>) => {
+      this.lastFrame = e.data.frame;
+      this.playing = e.data.playing;
+      this.onPosition((e.data.frame / this.ctx.sampleRate) * this.speed, e.data.playing);
+    };
     this.node = node;
   }
 
@@ -35,12 +47,37 @@ export class Engine {
 
   /** Hand the song's stems to the worklet, every stem at full gain. The engine posts copies, so the caller keeps its arrays. */
   load(stems: Stem[]): void {
+    this.source = stems;
+    this.speed = 1;
+    this.gains = stems.map(() => ({ level: 1, muted: false }));
+    this.post(stems);
+  }
+
+  /** Re-render every stem at `speed` (0.5..1) and swap it in, keeping position, loop, gains and play state. */
+  async setSpeed(speed: number): Promise<void> {
+    if (speed === this.speed || this.source.length === 0) return;
+    const wasPlaying = this.playing;
+    const at = (this.lastFrame / this.ctx.sampleRate) * this.speed;
+    this.pause();
+    const stretched = await Promise.all(
+      this.source.map(async (s) => ({ name: s.name, channels: await stretchChannels(s.channels, speed, this.ctx.sampleRate) })),
+    );
+    this.speed = speed;
+    this.post(stretched);
+    this.gains.forEach((g, i) => this.send({ type: "gain", stem: i, level: g.level, muted: g.muted }));
+    if (this.loopSec) this.setLoop(...this.loopSec);
+    this.seek(at);
+    if (wasPlaying) await this.play();
+  }
+
+  private post(stems: Stem[]): void {
     const copies = stems.map((s) => ({ name: s.name, channels: s.channels.map((c) => c.slice()) }));
     this.send({ type: "load", stems: copies }, copies.flatMap((s) => s.channels.map((c) => c.buffer)));
   }
 
   /** Set one stem's level (0..1) and mute. The worklet glides there in about 10 ms. */
   setStemGain(stem: number, level: number, muted: boolean): void {
+    this.gains[stem] = { level, muted };
     this.send({ type: "gain", stem, level, muted });
   }
 
@@ -54,16 +91,18 @@ export class Engine {
   }
 
   seek(seconds: number): void {
-    this.send({ type: "seek", frame: seconds * this.ctx.sampleRate });
+    this.send({ type: "seek", frame: (seconds / this.speed) * this.ctx.sampleRate });
   }
 
   /** Loop between two times in seconds. The worklet wraps sample-accurately. */
   setLoop(startSec: number, endSec: number): void {
     const sr = this.ctx.sampleRate;
-    this.send({ type: "loop", start: Math.round(startSec * sr), end: Math.round(endSec * sr) });
+    this.loopSec = [startSec, endSec];
+    this.send({ type: "loop", start: Math.round((startSec / this.speed) * sr), end: Math.round((endSec / this.speed) * sr) });
   }
 
   clearLoop(): void {
+    this.loopSec = null;
     this.send({ type: "loopOff" });
   }
 

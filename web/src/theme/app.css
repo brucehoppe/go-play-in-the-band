@@ -89,3 +89,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; }
 .swatch.band { background: var(--amber); }
 .swatch.guitar { background: var(--teal); margin-left: 12px; }
+
+.speeds { display: flex; align-items: center; gap: 6px; }
+.speeds button { min-height: 44px; padding: 0 12px; }
+.speeds button.on { background: var(--amber); color: #16140f; font-weight: 600; }

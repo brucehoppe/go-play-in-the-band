@@ -51,8 +51,8 @@ jobs:
         run: cargo test --manifest-path desktop/Cargo.toml
       - name: Build the local app (macOS)
         if: runner.os == 'macOS'
-        run: ./scripts/build.sh --skip-tests
+        run: ./scripts/build.sh --skip-tests --no-splitter
       - name: Build the local app (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: ./scripts/build.ps1 -SkipTests
+        run: ./scripts/build.ps1 -SkipTests -NoSplitter

@@ -39,3 +39,20 @@ describe("isSilent", () => {
     expect(isSilent(1, [false, true], 1)).toBe(false);
   });
 });
+
+import { splitterHelp } from "./band";
+describe("splitterHelp", () => {
+  it("in the local app, says how to install it, with no server to start by hand", () => {
+    expect(splitterHelp(true)).toContain("scripts/install");
+    expect(splitterHelp(true)).not.toContain("run-server");
+  });
+  it("on the hosted demo, points at the local app", () => {
+    expect(splitterHelp(false)).toContain("local app");
+  });
+  it("never mentions the old --stems flag, and always offers Quick split", () => {
+    for (const local of [true, false]) {
+      expect(splitterHelp(local)).not.toContain("--stems");
+      expect(splitterHelp(local)).toContain("Quick split");
+    }
+  });
+});

@@ -19,3 +19,10 @@ export function stemLabel(name: string): string {
 export function isSilent(i: number, muted: boolean[], solo: number | null): boolean {
   return (solo !== null && solo !== i) || (solo !== i && (muted[i] ?? false));
 }
+
+/** What to tell someone who pressed Instruments when the splitter did not answer. */
+export function splitterHelp(localApp: boolean): string {
+  return localApp
+    ? "The instrument splitter is not installed. Run scripts/install.sh once (Windows: scripts\\install.ps1; about 1 GB), then open the app again. Quick split works without it."
+    : "Splitting into instruments runs on your own computer, not on this website. Get the local app (see the README), which installs and starts the splitter for you. Quick split works right here.";
+}

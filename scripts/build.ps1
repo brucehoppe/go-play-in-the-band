@@ -3,12 +3,15 @@
 #   .\scripts\build.ps1                  build, test, and put the program in .\out
 #   .\scripts\build.ps1 -Out C:\Apps     choose the output folder
 #   .\scripts\build.ps1 -SkipTests       skip the test suites
+#   .\scripts\build.ps1 -NoSplitter      skip the instrument splitter (Demucs, about 1 GB, installed once)
 #
-# Steps: Rust/WASM core -> web app (web\dist) -> one Rust program with the web app inside it.
+# Steps: Rust/WASM core -> web app (web\dist) -> one Rust program with the web app inside it
+# -> the instrument splitter in %USERPROFILE%\.go-play-in-the-band, which the app starts by itself.
 # On macOS use build.sh.
 param(
   [string]$Out = "out",
-  [switch]$SkipTests
+  [switch]$SkipTests,
+  [switch]$NoSplitter
 )
 $ErrorActionPreference = "Stop"
 Set-Location (Join-Path $PSScriptRoot "..")
@@ -48,4 +51,13 @@ $exe = Join-Path $Out "Go Play in the Band.exe"
 Copy-Item "desktop\target\release\go-play-in-the-band.exe" $exe -Force
 $size = [math]::Round((Get-Item $exe).Length / 1MB, 1)
 Write-Host "==> Built $exe ($size MB)"
+if ($NoSplitter) {
+  Write-Host "==> Skipped the instrument splitter. Add it later with: scripts\install.ps1"
+} else {
+  Write-Host "==> Instrument splitter"
+  # The app works without it, so a failure here (no Python, no network) does not fail the build.
+  try { & (Join-Path $PSScriptRoot "install.ps1") }
+  catch { Write-Host "    The splitter was not installed; everything else works. Try again with: scripts\install.ps1" }
+  $global:LASTEXITCODE = 0
+}
 Write-Host "    Double-click it. It opens in your browser and stops by itself after you close the page."

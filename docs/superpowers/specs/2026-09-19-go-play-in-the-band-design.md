@@ -98,7 +98,8 @@ this section records where the build differs from it.
 - Takes are stored whole in IndexedDB, not streamed in chunks. Take export is WAV only; the
   lamejs MP3 encoder is not ported.
 - The backend has `/health`, `/analyse` (tempo), `/separate` and `/stems/...`. Section
-  estimation is not built. Demucs and librosa are optional installs.
+  estimation is not built. Demucs and librosa are installed by the build unless you pass `--no-splitter`;
+  the local app starts and stops that server itself.
 - Not verified: quality by ear, a real microphone, real separation output, Windows by hand.
 - The seven-step brief is not in the repo, so steps 3b to 7 are inferred from this spec.
 - Overdub (added after the original design): a take is placed on the song timeline at the

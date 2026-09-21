@@ -7,7 +7,7 @@ import { sumMono, waveLayers } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
 import { fetchStem, separate, serverAvailable } from "./data/server";
 import { loadTakes, saveTake } from "./data/takes";
-import { isSilent } from "./lib/band";
+import { isSilent, splitterHelp } from "./lib/band";
 import { DEMO_INFO, DEMO_SECTIONS, GUITAR_STEM, synthDemoStems } from "./data/demo";
 import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
 import { makeClick } from "./lib/songtools";
@@ -330,7 +330,7 @@ export function App() {
       return;
     }
     if (!(await serverAvailable())) {
-      setStatus("The instrument splitter is not running. In a terminal, run scripts/install.sh --stems once, then scripts/run-server.sh, and press Instruments again. Quick split works without it.");
+      setStatus(splitterHelp(document.querySelector('meta[name="gpitb-local"]') !== null));
       return;
     }
     await openFileParts(file);

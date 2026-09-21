@@ -1,6 +1,10 @@
-"""Optional local backend: stem separation and analysis. Binds to 127.0.0.1 only."""
+"""The instrument splitter: stem separation and analysis, on this computer. Binds to 127.0.0.1 only."""
 from pathlib import Path
+import os
+import signal
 import tempfile
+import threading
+import time
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
@@ -70,6 +74,23 @@ def audible_stems(folder: Path) -> list[str]:
         return []
     keep = [n for n, v in levels.items() if v > 0 and 20 * np.log10(v / loudest) > SILENT_DB]
     return sorted(keep, key=lambda n: -levels[n])
+
+
+def orphaned(started_by: int | None, parent_now: int) -> bool:
+    """True when the local app that started this server is gone (it crashed or was force-quit)."""
+    return started_by is not None and parent_now != started_by
+
+
+def _stop_when_orphaned(started_by: int) -> None:
+    # When a parent dies the system adopts the child, so its parent id changes. Not so on Windows,
+    # where this never fires and the app's own stop on exit is all there is.
+    while not orphaned(started_by, os.getppid()):
+        time.sleep(5)
+    os.kill(os.getpid(), signal.SIGTERM)
+
+
+if os.environ.get("GPITB_PARENT_PID", "").isdigit():
+    threading.Thread(target=_stop_when_orphaned, args=(int(os.environ["GPITB_PARENT_PID"]),), daemon=True).start()
 
 
 @app.get("/health")

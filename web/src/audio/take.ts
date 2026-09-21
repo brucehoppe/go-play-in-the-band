@@ -18,8 +18,8 @@ export function mixTakeWithBand(band: Float32Array, take: Float32Array, takeGain
 }
 
 /** Encode mono float samples as a 16-bit PCM WAV file. */
-export function encodeWav(samples: Float32Array, sampleRate: number): Uint8Array {
-  const bytes = new Uint8Array(44 + samples.length * 2);
+export function encodeWav(samples: Float32Array, sampleRate: number): Uint8Array<ArrayBuffer> {
+  const bytes = new Uint8Array(new ArrayBuffer(44 + samples.length * 2));
   const v = new DataView(bytes.buffer);
   const tag = (o: number, s: string) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
   tag(0, "RIFF");

@@ -12,6 +12,10 @@ updates:
     directory: /dsp-core
     schedule:
       interval: weekly
+  - package-ecosystem: cargo
+    directory: /desktop
+    schedule:
+      interval: weekly
   - package-ecosystem: pip
     directory: /server
     schedule:

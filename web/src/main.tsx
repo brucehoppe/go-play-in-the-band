@@ -20,3 +20,10 @@ createRoot(document.getElementById("root")!).render(
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 }
+
+// The local app marks its page; tell it we are still here so it can stop itself after we close.
+if (document.querySelector('meta[name="gpitb-local"]')) {
+  const beat = () => void fetch("./__alive").catch(() => {});
+  beat();
+  setInterval(beat, 20000);
+}

@@ -18,6 +18,7 @@ every build.
 |---|---|---|
 | `rustfft` (and its dependencies `num-complex`, `num-traits`, `num-integer`, `primal-check`, `strength_reduce`, `transpose`) | Fourier transforms for tempo, key and the quick split | MIT or Apache-2.0 |
 | `wasm-bindgen` | the JavaScript bridge | MIT or Apache-2.0 |
+| `include_dir` (local app only) | embedding the built web app in the program | MIT |
 
 ## Optional backend dependencies
 

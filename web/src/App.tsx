@@ -8,6 +8,7 @@ import { computePeaks } from "./audio/peaks";
 import { fetchStem, separate, serverAvailable } from "./data/server";
 import { loadTakes, saveTake } from "./data/takes";
 import { isSilent, splitterHelp } from "./lib/band";
+import { isLocalApp, quitLocalApp } from "./lib/local";
 import { DEMO_INFO, DEMO_SECTIONS, GUITAR_STEM, synthDemoStems } from "./data/demo";
 import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
 import { makeClick } from "./lib/songtools";
@@ -48,6 +49,8 @@ export function App() {
   const [speed, setSpeed] = useState(1);
   const [preparing, setPreparing] = useState(false);
   const [recording, setRecording] = useState(false);
+  /** The local app was told to quit: nothing on this page works any more. */
+  const [stopped, setStopped] = useState(false);
   const stemsRef = useRef<Stem[]>([]);
   const fileRef = useRef<File | null>(null);
   const [choice, setChoice] = useState<AudioChoice>(loadChoice);
@@ -330,7 +333,7 @@ export function App() {
       return;
     }
     if (!(await serverAvailable())) {
-      setStatus(splitterHelp(document.querySelector('meta[name="gpitb-local"]') !== null));
+      setStatus(splitterHelp(isLocalApp()));
       return;
     }
     await openFileParts(file);
@@ -406,9 +409,29 @@ export function App() {
 
   const defaultLen = () => (song?.bpm && bpb ? (60 / song.bpm) * bpb : 4);
 
+  async function quit() {
+    engine().pause();
+    if (await quitLocalApp()) setStopped(true);
+    else setError("Could not reach the app to stop it. It stops by itself a couple of minutes after you close this tab.");
+  }
+
+  if (stopped) {
+    return (
+      <div className="app">
+        <header className="header"><h1>Go Play in the Band</h1></header>
+        <main className="main">
+          <section className="panel" role="status">
+            <h2>Stopped</h2>
+            <p>The app and the instrument splitter have stopped. Your takes are saved. You can close this tab; open the app again to carry on.</p>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
-      <Header song={song} busy={busy} onPickFile={openFile} onLoadDemo={openDemo} />
+      <Header song={song} busy={busy} onPickFile={openFile} onLoadDemo={openDemo} onQuit={isLocalApp() ? quit : undefined} recording={recording} />
       <main className="main">
         <div className="layout">
         <div className="col">

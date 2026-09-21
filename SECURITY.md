@@ -18,6 +18,8 @@ Say what you did, what happened, and what you expected. Expect a reply within ab
 - **The instrument splitter** listens on 127.0.0.1 only, accepts uploads up to 200 MB, answers only this app's own origins (the dev server, the local app and the hosted demo), and serves
   only `.wav` files from its own cache, addressed by a SHA-256 hash. Path tricks or a way to
   reach it from another machine or website are security issues.
+- **Quit** is the local app's only request that does anything. It must be a POST whose `Origin` is the app's own page, so a link,
+  image or form on another website cannot close the app. A way to forge it is a security issue.
 - **What the local app runs.** Only the Python in `~/.go-play-in-the-band/venv`, which `scripts/install` made, running the
   server code that travels inside the app (written to `~/.go-play-in-the-band/server` at launch). It is stopped when the app
   exits, and stops itself if the app dies. Installing downloads Demucs, PyTorch and their dependencies from PyPI, unpinned;

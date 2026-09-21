@@ -31,7 +31,7 @@ More screenshots: [docs/screenshots](docs/screenshots). Retake them with `node s
 
 ## Local app
 
-One small program with the web app inside it. It opens in your browser and stops after you close the page.
+One small program with the web app inside it. It opens in your browser. **Quit** on the page stops it; so does closing the page, after a couple of minutes.
 
     ./scripts/build.sh --install      # macOS: builds "Go Play in the Band.app" into ~/Applications
     .\scripts\build.ps1               # Windows: builds "Go Play in the Band.exe" into .\out

@@ -1,0 +1,9 @@
+{
+  "name": "Go Play in the Band",
+  "short_name": "Play in the Band",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#16140f",
+  "theme_color": "#16140f",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

@@ -4,6 +4,7 @@ import { alignTake, encodeWav, mixTakeWithBand } from "./audio/take";
 import type { Recorder } from "./audio/recorder";
 import { sumMono } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
+import { saveTake } from "./data/takes";
 import { DEMO_INFO, DEMO_SECTIONS, GUITAR_STEM, synthDemoStems } from "./data/demo";
 import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
 import { loopName, setIn, setOut } from "./lib/loop";
@@ -157,7 +158,9 @@ export function App() {
         engine().pause();
         const raw = await recorderRef.current!.stop();
         setRecording(false);
-        setTake(alignTake(raw, 0));
+        const aligned = alignTake(raw, 0);
+        setTake(aligned);
+        void saveTake(`take:${song?.name ?? "song"}`, aligned);
         setStatus("Take recorded. Export it with the band.");
       }
     } catch {

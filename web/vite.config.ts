@@ -11,7 +11,7 @@ const csp = [
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",
   "worker-src 'self' blob:",
-  "connect-src 'self'",
+  "connect-src 'self' http://127.0.0.1:8765",
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",

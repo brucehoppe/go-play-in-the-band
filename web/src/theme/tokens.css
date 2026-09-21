@@ -12,5 +12,8 @@
   --font-display: "Bricolage Grotesque Variable", system-ui, sans-serif;
   --font-ui: "IBM Plex Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  /* Widest the page gets. The header and transport bar line up with it on big screens. */
+  --page: 1800px;
+  --gutter: max(24px, calc((100% - var(--page)) / 2 + 24px));
   color-scheme: dark;
 }

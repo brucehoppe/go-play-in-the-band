@@ -8,6 +8,7 @@ A thought experiment and proof of concept. Expect rough edges.
 - Unit tests: web (Vitest), Rust (`dsp-core`, `desktop`), server (pytest). CI runs on macOS and Windows.
 - Headless Chrome: the demo and real four-minute recordings load; speed, Record and overdub (fake
   microphone), song tools, quick split and the local app all run with no console errors.
+- Layout measured in headless Chrome from 820 px wide up to 27-inch sizes (2560x1440 at 1x and 2x, 3840x2160): no overflow, header, content and transport line up, Play is always on screen, waveforms are drawn at the screen's pixel density.
 
 ## Not checked
 
@@ -15,6 +16,7 @@ A thought experiment and proof of concept. Expect rough edges.
 - No real microphone or USB interface (device picking was run against Chrome's fake devices): whether overdubs line up in time, and how good calibration is.
 - Tempo can be out by a factor of two; the first beat may not be beat one; 4/4 is assumed.
 - Demucs was run on one real recording (solo guitar: 98% landed in the guitar stem, the stems add back up to within -34 dB). How cleanly it lifts a guitar out of a full band has not been heard.
+- No real 27-inch monitor: the big-screen layout was measured in an emulated window, not looked at on hardware.
 - The Windows app is built in CI only, never run by hand. The Mac app has no icon and is not notarised.
 
 ## Known limits

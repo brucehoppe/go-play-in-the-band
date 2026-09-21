@@ -1,4 +1,6 @@
 * { box-sizing: border-box; }
+/* Keep keyboard focus from landing underneath the pinned transport bar. */
+html { scroll-padding-bottom: 160px; }
 body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui); }
 h1, h2 { font-family: var(--font-display); margin: 0; }
 button {
@@ -14,27 +16,29 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .app { display: grid; grid-template-rows: auto 1fr auto; min-height: 100vh; }
 .header {
   display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
-  padding: 12px 24px; border-bottom: 1px solid var(--border); background: var(--panel);
+  padding: 12px var(--gutter); border-bottom: 1px solid var(--border); background: var(--panel);
 }
 .header h1 { font-size: 1.4rem; margin-right: auto; }
 .filecard { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--text-2); font-size: 0.9rem; }
 .filecard strong { color: var(--text); font-weight: 600; }
-.main { padding: 24px; max-width: 1400px; width: 100%; margin: 0 auto; }
+.main { padding: 24px; max-width: var(--page); width: 100%; margin: 0 auto; }
 .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
 .panel h2 { font-size: 1rem; color: var(--text-2); margin-bottom: 12px; }
 .empty { color: var(--text-2); }
 .error { color: var(--red-2); margin-top: 12px; }
 
 .wave {
-  position: relative; height: 140px; background: var(--bg);
+  position: relative; height: clamp(140px, 12vh, 200px); background: var(--bg);
   border: 1px solid var(--border); border-radius: 8px; cursor: pointer; touch-action: none;
 }
 .wave canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); pointer-events: none; }
 
 .transport {
-  display: flex; align-items: center; gap: 16px; padding: 12px 24px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px var(--gutter);
   border-top: 1px solid var(--border); background: var(--panel);
+  /* Play and Record stay in reach however long the page is. */
+  position: sticky; bottom: 0; z-index: 2; white-space: nowrap;
 }
 .transport .time { font-family: var(--font-mono); font-size: 1.1rem; margin-right: auto; }
 .transport .play { min-width: 64px; min-height: 64px; border-radius: 50%; background: var(--amber); color: #16140f; font-weight: 600; }
@@ -52,7 +56,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .loop-times { margin: 0 0 12px; color: var(--text); }
 .loop-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
 .hint { color: var(--text-2); font-size: 0.9rem; }
-.zoom { position: relative; height: 160px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; touch-action: none; overflow: hidden; }
+.zoom { position: relative; height: clamp(160px, 18vh, 300px); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; touch-action: none; overflow: hidden; }
 .zoom canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .zoom .pad { position: absolute; top: 0; bottom: 0; background: rgba(22, 20, 15, 0.7); pointer-events: none; }
 .zoom .gl { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--border); pointer-events: none; }
@@ -67,6 +71,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .col { min-width: 0; }
 @media (min-width: 1280px) {
   .layout { grid-template-columns: minmax(0, 1fr) 320px; }
+}
+@media (min-width: 1920px) {
+  .layout { grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; }
 }
 .band-panel { margin-top: 16px; }
 @media (min-width: 1280px) { .band-panel { margin-top: 0; } }
@@ -104,7 +111,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .tools { margin-top: 16px; }
 .tools-row select { min-height: 40px; max-width: 16rem; padding: 0 8px; background: var(--panel); color: inherit; border: 1px solid var(--border); border-radius: 8px; font: inherit; }
 .split-card .presets { display: flex; gap: 8px; flex-wrap: wrap; }
-.tempo-slider { display: grid; gap: 2px; font-size: 0.8rem; min-width: 150px; }
+.tempo-slider { display: grid; gap: 2px; font-size: 0.8rem; min-width: 160px; flex: 0 1 220px; }
 .tempo-slider input { width: 100%; accent-color: var(--amber); }
 .speeds-label { font-size: 0.8rem; color: var(--text-2); margin-right: 2px; }
-.tempo-slider { min-width: 220px; }

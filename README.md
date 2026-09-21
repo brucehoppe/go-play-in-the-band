@@ -105,6 +105,10 @@ Only needed to split a recording into parts. It listens on 127.0.0.1 only.
 
 Nothing you load leaves your computer.
 
+## Security
+
+See [SECURITY.md](SECURITY.md) for what the app promises and how to report a problem privately.
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

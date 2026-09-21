@@ -12,7 +12,7 @@ section, slow it down, and record yourself with the band. TypeScript, plus Rust 
 
 ![The demo song: waveform, a four-bar loop, the band mixer with the guitar muted, speed at 75%](docs/screenshots/03-loop-mute-75.png)
 
-More screenshots: [docs/screenshots](docs/screenshots).
+More screenshots: [docs/screenshots](docs/screenshots). Retake them with `node scripts/screenshots.mjs`.
 
 ## Features
 

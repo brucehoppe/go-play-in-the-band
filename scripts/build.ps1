@@ -60,4 +60,4 @@ if ($NoSplitter) {
   catch { Write-Host "    The splitter was not installed; everything else works. Try again with: scripts\install.ps1" }
   $global:LASTEXITCODE = 0
 }
-Write-Host "    Double-click it. It opens in your browser and stops by itself after you close the page."
+Write-Host "    Double-click it. It opens in your browser. Quit on the page stops it."

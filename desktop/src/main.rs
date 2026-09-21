@@ -1,7 +1,7 @@
 //! Go Play in the Band as a local app. The built web app (`web/dist`) is embedded in this one
 //! file, served on 127.0.0.1 only, and opened in the default browser. The page sends a
 //! heartbeat while it is open; the program exits by itself a while after the last one.
-//! It also runs the instrument splitter while it is open, when that is installed (see `splitter`).
+//! The page's Quit button stops it at once. It also runs the instrument splitter while it is open, when that is installed (see `splitter`).
 
 mod splitter;
 
@@ -54,6 +54,13 @@ fn host_ok(host: &str, port: u16) -> bool {
     host == format!("127.0.0.1:{port}") || host == format!("localhost:{port}")
 }
 
+/// Quit is the one request that does something, so it is the one another website might try to
+/// forge. It must be a POST (links and images are GETs) and the browser must say it came from
+/// the app's own page.
+fn may_quit(method: &str, origin: &str, port: u16) -> bool {
+    method == "POST" && (origin == format!("http://127.0.0.1:{port}") || origin == format!("http://localhost:{port}"))
+}
+
 fn respond(stream: &mut TcpStream, status: &str, kind: &str, body: &[u8], head_only: bool) {
     let head = format!(
         "HTTP/1.1 {status}\r\nContent-Type: {kind}\r\nContent-Length: {}\r\nCache-Control: no-cache\r\nX-Content-Type-Options: nosniff\r\nConnection: close\r\n\r\n",
@@ -77,7 +84,7 @@ fn handle(mut stream: TcpStream, port: u16, started: Instant, last_beat: &Atomic
     }
     let mut parts = line.split_whitespace();
     let (method, target) = (parts.next().unwrap_or(""), parts.next().unwrap_or(""));
-    let mut host = String::new();
+    let (mut host, mut origin) = (String::new(), String::new());
     loop {
         let mut h = String::new();
         if reader.read_line(&mut h).unwrap_or(0) == 0 || h == "\r\n" || h == "\n" {
@@ -86,10 +93,23 @@ fn handle(mut stream: TcpStream, port: u16, started: Instant, last_beat: &Atomic
         if let Some((name, value)) = h.split_once(':') {
             if name.eq_ignore_ascii_case("host") {
                 host = value.trim().to_string();
+            } else if name.eq_ignore_ascii_case("origin") {
+                origin = value.trim().to_string();
             }
         }
     }
     let head_only = method == "HEAD";
+    if target == "/__quit" {
+        if !host_ok(&host, port) || !may_quit(method, &origin, port) {
+            return respond(&mut stream, "403 Forbidden", "text/plain", b"not from this app", false);
+        }
+        // Answer first, so the page knows it worked, then stop the splitter and go.
+        respond(&mut stream, "204 No Content", "text/plain", b"", false);
+        let _ = stream.flush();
+        drop(stream);
+        splitter::stop();
+        std::process::exit(0);
+    }
     if method != "GET" && !head_only {
         return respond(&mut stream, "405 Method Not Allowed", "text/plain", b"GET only", false);
     }
@@ -134,7 +154,7 @@ fn main() {
     let port = listener.local_addr().expect("no local address").port();
     let url = format!("http://127.0.0.1:{port}/");
     println!("Go Play in the Band is running at {url}");
-    println!("It stops by itself a couple of minutes after you close the page. Ctrl+C stops it now.");
+    println!("Quit on the page stops it. So does closing the page, after a couple of minutes, or Ctrl+C here.");
     if !std::env::args().any(|a| a == "--no-splitter") {
         println!("{}", splitter::start());
     }
@@ -184,6 +204,19 @@ mod tests {
         assert!(!host_ok("evil.example:8766", 8766));
         assert!(!host_ok("127.0.0.1:9999", 8766));
         assert!(!host_ok("", 8766));
+    }
+
+    #[test]
+    fn only_the_apps_own_page_may_quit_it() {
+        assert!(may_quit("POST", "http://127.0.0.1:8766", 8766));
+        assert!(may_quit("POST", "http://localhost:8766", 8766));
+        // A link or an image on any website is a GET: it must not be able to close the app.
+        assert!(!may_quit("GET", "http://127.0.0.1:8766", 8766));
+        // A form on another website can POST, but the browser says where it came from.
+        assert!(!may_quit("POST", "https://evil.example", 8766));
+        assert!(!may_quit("POST", "null", 8766));
+        assert!(!may_quit("POST", "", 8766));
+        assert!(!may_quit("POST", "http://127.0.0.1:9999", 8766));
     }
 
     #[test]

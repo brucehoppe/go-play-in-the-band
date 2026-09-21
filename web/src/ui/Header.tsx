@@ -7,11 +7,15 @@ interface Props {
   busy: boolean;
   onPickFile: (file: File) => void;
   onLoadDemo: () => void;
+  /** Only in the local app: there is nothing to quit on the hosted demo. */
+  onQuit?: () => void;
+  /** Quit waits for a take in progress. */
+  recording?: boolean;
 }
 
 const dash = (v: string | number | null) => (v === null ? "—" : String(v));
 
-export function Header({ song, busy, onPickFile, onLoadDemo }: Props) {
+export function Header({ song, busy, onPickFile, onLoadDemo, onQuit, recording }: Props) {
   const input = useRef<HTMLInputElement>(null);
   return (
     <header className="header">
@@ -39,6 +43,11 @@ export function Header({ song, busy, onPickFile, onLoadDemo }: Props) {
       />
       <button disabled={busy} onClick={() => input.current?.click()}>Load recording</button>
       <button disabled={busy} onClick={onLoadDemo}>Try the demo song</button>
+      {onQuit && (
+        <button className="quit" disabled={recording} title="Stop the app and the instrument splitter. Your takes are already saved." onClick={onQuit}>
+          Quit
+        </button>
+      )}
     </header>
   );
 }

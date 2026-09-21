@@ -94,4 +94,4 @@ if [ "$INSTALL" = 1 ]; then
   echo "==> Installed to $DEST"
 fi
 splitter
-echo "    Open it like any app. It opens in your browser and stops by itself after you close the page."
+echo "    Open it like any app. It opens in your browser. Quit on the page stops it."

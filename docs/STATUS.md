@@ -8,6 +8,7 @@ A thought experiment and proof of concept. Expect rough edges.
 - Unit tests: web (Vitest), Rust (`dsp-core`, `desktop`), server (pytest). CI runs on macOS and Windows.
 - Headless Chrome: the demo and real four-minute recordings load; speed, Record and overdub (fake
   microphone), song tools, quick split and the local app all run with no console errors.
+- Quit: clicked in headless Chrome, the app and the splitter both stopped and freed their ports; six forged requests (GET, other origins, no origin, wrong host) were refused.
 - Layout measured in headless Chrome from 820 px wide up to 27-inch sizes (2560x1440 at 1x and 2x, 3840x2160): no overflow, header, content and transport line up, Play is always on screen, waveforms are drawn at the screen's pixel density.
 
 ## Not checked

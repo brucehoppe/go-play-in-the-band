@@ -1,4 +1,4 @@
-/** The only module that talks to the optional local backend. Absent server means demo mode. */
+/** The only module that talks to the instrument splitter on this computer. Absent server means demo mode. */
 const BASE = "http://127.0.0.1:8765";
 
 export interface SeparateResult {

@@ -53,3 +53,11 @@ def test_audible_stems_drops_silent_ones_and_sorts_loudest_first(tmp_path):
     sf.write(sub / "vocals.wav", tone * 0.0, 8000)
     assert audible_stems(tmp_path) == ["guitar.wav", "bass.wav"]
     assert audible_stems(tmp_path / "nothing") == []
+
+
+def test_orphaned_means_the_app_that_started_us_is_gone():
+    from app import orphaned
+
+    assert not orphaned(started_by=None, parent_now=1)  # started by hand: never stop by itself
+    assert not orphaned(started_by=4242, parent_now=4242)
+    assert orphaned(started_by=4242, parent_now=1)  # the app died; the system adopted us

@@ -17,6 +17,7 @@ A thought experiment and proof of concept. Expect rough edges.
 - Tempo can be out by a factor of two; the first beat may not be beat one; 4/4 is assumed.
 - Demucs was run on one real recording (solo guitar: 98% landed in the guitar stem, the stems add back up to within -34 dB). How cleanly it lifts a guitar out of a full band has not been heard.
 - No real 27-inch monitor: the big-screen layout was measured in an emulated window, not looked at on hardware.
+- The splitter's install and its start and stop by the app were run on this Mac only. On Windows the scripts are untested, and a force-quit app leaves the splitter running until the next launch reuses it.
 - The Windows app is built in CI only, never run by hand. The Mac app has no icon and is not notarised.
 
 ## Known limits

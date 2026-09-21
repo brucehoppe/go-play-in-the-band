@@ -5,19 +5,22 @@
 #   ./scripts/build.sh --out ~/Desktop choose the output folder
 #   ./scripts/build.sh --skip-tests    skip the test suites
 #   ./scripts/build.sh --install       macOS: also copy the app to ~/Applications
+#   ./scripts/build.sh --no-splitter   skip the instrument splitter (Demucs, about 1 GB, installed once)
 #
-# Steps: Rust/WASM core -> web app (web/dist) -> one Rust program with the web app inside it.
+# Steps: Rust/WASM core -> web app (web/dist) -> one Rust program with the web app inside it
+# -> the instrument splitter in ~/.go-play-in-the-band, which the app starts by itself.
 # On macOS that program is wrapped as "Go Play in the Band.app". On Windows use build.ps1.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-OUT="out" TESTS=1 INSTALL=0
+OUT="out" TESTS=1 INSTALL=0 SPLITTER=1
 while [ $# -gt 0 ]; do
   case "$1" in
     --out)        [ $# -ge 2 ] || { echo "--out needs a folder" >&2; exit 1; }; OUT="$2"; shift ;;
     --skip-tests) TESTS=0 ;;
     --install)    INSTALL=1 ;;
-    -h|--help)    sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --no-splitter) SPLITTER=0 ;;
+    -h|--help)    sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)            echo "unknown option: $1 (try --help)" >&2; exit 1 ;;
   esac
   shift
@@ -45,8 +48,16 @@ BIN="desktop/target/release/go-play-in-the-band"
 VERSION="$("$BIN" --version | awk '{print $2}')"
 mkdir -p "$OUT"
 
+splitter() {
+  [ "$SPLITTER" = 1 ] || { echo "==> Skipped the instrument splitter. Add it later with: scripts/install.sh"; return 0; }
+  echo "==> Instrument splitter"
+  # The app works without it, so a failure here (no Python, no network) does not fail the build.
+  sh scripts/install.sh || echo "    The splitter was not installed; everything else works. Try again with: scripts/install.sh"
+}
+
 if [ "$(uname -s)" != "Darwin" ]; then
   cp "$BIN" "$OUT/go-play-in-the-band"
+  splitter
   echo "==> Built $OUT/go-play-in-the-band. Run it to open the app in your browser."
   exit 0
 fi
@@ -82,4 +93,5 @@ if [ "$INSTALL" = 1 ]; then
   cp -R "$APP" "$DEST"
   echo "==> Installed to $DEST"
 fi
+splitter
 echo "    Open it like any app. It opens in your browser and stops by itself after you close the page."

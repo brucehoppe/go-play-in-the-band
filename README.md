@@ -25,7 +25,7 @@ More screenshots: [docs/screenshots](docs/screenshots). Retake them with `node s
 - **Audio devices**: record from a USB interface (Input 1, 2 or both); play through a USB headphone amp.
 - **Song tools**: estimated tempo, first beat and key; editable tempo; click track.
 - **Split**: right in the band panel. Quick split (drums-like, low bass, the rest) works anywhere.
-- **Isolate the guitar**: Instruments splits a song into guitar, bass, drums, piano, vocals and other with Demucs, on your computer. Needs the splitter below.
+- **Isolate the guitar**: Instruments splits a song into guitar, bass, drums, piano, vocals and other with Demucs, on your computer. Comes with the local app.
 - **Export mix**: what you hear, as a WAV.
 - **Private**: nothing you load leaves your computer. Works offline after one visit.
 
@@ -36,6 +36,16 @@ One small program with the web app inside it. It opens in your browser and stops
     ./scripts/build.sh --install      # macOS: builds "Go Play in the Band.app" into ~/Applications
     .\scripts\build.ps1               # Windows: builds "Go Play in the Band.exe" into .\out
 
+### Instrument splitter
+
+The build also installs the instrument splitter, and the app starts and stops it for you. It is a
+neural network (Demucs on PyTorch): about 1 GB, needs Python 3, and lives in `~/.go-play-in-the-band`,
+which is why it sits beside the app rather than inside it. The browser demo cannot run it.
+
+    ./scripts/build.sh --install --no-splitter   # leave it out (Windows: -NoSplitter)
+    scripts/install.sh                           # add it later (Windows: scripts\install.ps1)
+    scripts/run-server.sh                        # run it by hand, for the browser demo or npm run dev
+
 ## Develop
 
 Needs Node.js 24+, Rust stable with the `wasm32-unknown-unknown` target, and `wasm-pack`.
@@ -44,13 +54,6 @@ Needs Node.js 24+, Rust stable with the `wasm32-unknown-unknown` target, and `wa
     npm install
     npm run dev
     npm test
-
-## Instrument splitter (optional)
-
-Isolating the guitar needs a neural network (Demucs). It runs on your computer only, about 1 GB to install.
-
-    scripts/install.sh --stems     # once   (Windows: scripts\install.ps1 -Stems)
-    scripts/run-server.sh          # leave running, then press Instruments in the app
 
 ## More
 

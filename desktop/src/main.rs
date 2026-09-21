@@ -1,6 +1,9 @@
 //! Go Play in the Band as a local app. The built web app (`web/dist`) is embedded in this one
 //! file, served on 127.0.0.1 only, and opened in the default browser. The page sends a
 //! heartbeat while it is open; the program exits by itself a while after the last one.
+//! It also runs the instrument splitter while it is open, when that is installed (see `splitter`).
+
+mod splitter;
 
 use include_dir::{include_dir, Dir};
 use std::io::{BufRead, BufReader, Write};
@@ -132,6 +135,9 @@ fn main() {
     let url = format!("http://127.0.0.1:{port}/");
     println!("Go Play in the Band is running at {url}");
     println!("It stops by itself a couple of minutes after you close the page. Ctrl+C stops it now.");
+    if !std::env::args().any(|a| a == "--no-splitter") {
+        println!("{}", splitter::start());
+    }
     if !std::env::args().any(|a| a == "--no-open") {
         open_browser(&url);
     }
@@ -143,6 +149,7 @@ fn main() {
         std::thread::sleep(Duration::from_secs(5));
         let (now, beat) = (started.elapsed().as_secs(), watch.load(Ordering::Relaxed));
         if (beat > 0 && now - beat > QUIET_AFTER_HEARTBEAT) || (beat == 0 && now > QUIET_FROM_START) {
+            splitter::stop();
             std::process::exit(0);
         }
     });

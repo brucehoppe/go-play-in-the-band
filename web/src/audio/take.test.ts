@@ -35,3 +35,15 @@ describe("encodeWav", () => {
     expect(v.getInt16(48, true)).toBe(-32767);
   });
 });
+
+import { measureLatency } from "./take";
+describe("measureLatency", () => {
+  it("finds the click offset", () => {
+    const r = new Float32Array(1000);
+    r[350] = 0.9;
+    expect(measureLatency(r, 100)).toBe(250);
+  });
+  it("returns 0 when nothing was heard", () => {
+    expect(measureLatency(new Float32Array(100), 0)).toBe(0);
+  });
+});

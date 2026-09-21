@@ -4,7 +4,7 @@ import { alignTake, encodeWav, mixTakeWithBand } from "./audio/take";
 import type { Recorder } from "./audio/recorder";
 import { sumMono } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
-import { saveTake } from "./data/takes";
+import { loadTake, saveTake } from "./data/takes";
 import { DEMO_INFO, DEMO_SECTIONS, GUITAR_STEM, synthDemoStems } from "./data/demo";
 import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
 import { loopName, setIn, setOut } from "./lib/loop";
@@ -95,6 +95,8 @@ export function App() {
       monoRef.current = mono;
       const overview = await computePeaks(mono.slice(), PEAK_BUCKETS);
       setPeaks(overview);
+      setTake(null);
+      void loadTake(`take:${name}`).then((t) => t && setTake(t));
       setSong({ name, duration: stems[0].channels[0].length / e.sampleRate, ...meta, stemCount: stems.length });
       setStemNames(stems.map((s) => s.name));
       setLevels(stems.map(() => 100));

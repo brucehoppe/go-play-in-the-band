@@ -38,3 +38,17 @@ export function encodeWav(samples: Float32Array, sampleRate: number): Uint8Array
   samples.forEach((s, i) => v.setInt16(44 + i * 2, Math.round(Math.max(-1, Math.min(1, s)) * 32767), true));
   return bytes;
 }
+
+/** Loopback latency in frames: where the strongest click in `recorded` sits relative to the click played at `clickFrame`. */
+export function measureLatency(recorded: Float32Array, clickFrame: number): number {
+  let peak = 0;
+  let at = 0;
+  for (let i = 0; i < recorded.length; i++) {
+    const a = Math.abs(recorded[i]);
+    if (a > peak) {
+      peak = a;
+      at = i;
+    }
+  }
+  return peak < 0.05 ? 0 : Math.max(0, at - clickFrame);
+}

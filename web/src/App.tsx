@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { Engine } from "./audio/engine";
 import { alignTake, encodeWav, mixParts, placeTake } from "./audio/take";
 import type { Recorder } from "./audio/recorder";
+import { analyseSong, QUICK_PARTS, quickSplit } from "./audio/analysis";
 import { sumMono } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
 import { fetchStem, separate, serverAvailable } from "./data/server";
 import { loadTakes, saveTake } from "./data/takes";
 import { DEMO_INFO, DEMO_SECTIONS, GUITAR_STEM, synthDemoStems } from "./data/demo";
 import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
+import { makeClick } from "./lib/songtools";
 import { loopName, setIn, setOut } from "./lib/loop";
 import type { LoopRange } from "./lib/loop";
 import type { Section, SongInfo, Stem } from "./types";
@@ -15,6 +17,7 @@ import { BandMixer } from "./ui/BandMixer";
 import { Header } from "./ui/Header";
 import { LoopPanel } from "./ui/LoopPanel";
 import { SongPanel } from "./ui/SongPanel";
+import { SongTools } from "./ui/SongTools";
 import { TransportBar } from "./ui/TransportBar";
 
 const PEAK_BUCKETS = 4096;
@@ -78,7 +81,7 @@ export function App() {
 
   const bpb = beatsPerBar(song?.timeSig ?? null);
   const announceLoop = (l: LoopRange) =>
-    setStatus(`Loop set: ${song?.bpm && bpb ? barLabel(l.start, l.end, song.bpm, bpb) : loopName(l, null, null).replace("Loop, ", "")}`);
+    setStatus(`Loop set: ${song?.bpm && bpb ? barLabel(l.start, l.end, song.bpm, bpb, song.downbeat ?? 0) : loopName(l, null, null).replace("Loop, ", "")}`);
   function editLoop(l: LoopRange, announce = true) {
     setLoop(l);
     if (announce) announceLoop(l);
@@ -117,7 +120,20 @@ export function App() {
       saved.forEach((t, k) => stems.push({ name: `Take ${k + 1}`, channels: [placeTake(t, 0, length)] }));
       e.load(stems);
       await refreshViews(stems);
-      setSong({ name, duration: stems[0].channels[0].length / e.sampleRate, ...meta, stemCount: stems.length });
+      const info: SongInfo = { name, duration: stems[0].channels[0].length / e.sampleRate, ...meta, stemCount: stems.length };
+      setSong(info);
+      if (meta.bpm === null && monoRef.current) {
+        // Estimate tempo, first beat and key in the background; 4/4 is assumed.
+        void analyseSong(monoRef.current, e.sampleRate)
+          .then((a) =>
+            setSong((cur) =>
+              cur && cur.name === name && cur.bpm === null
+                ? { ...cur, bpm: a.bpm, timeSig: a.bpm ? "4/4" : null, key: a.key, downbeat: a.firstBeat, estimated: true }
+                : cur,
+            ),
+          )
+          .catch(() => {});
+      }
       setStemNames(stems.map((s) => s.name));
       setLevels(stems.map(() => 100));
       setMuted(stems.map(() => false));
@@ -250,6 +266,66 @@ export function App() {
     }
   }
 
+  /** Swap in a new set of parts for the current song, back at full level and 100% speed. */
+  async function replaceStems(stems: Stem[]) {
+    const e = engine();
+    const at = position;
+    e.pause();
+    e.load(stems);
+    e.seek(at);
+    await refreshViews(stems);
+    setStemNames(stems.map((s) => s.name));
+    setLevels(stems.map(() => 100));
+    setMuted(stems.map(() => false));
+    setSpeed(1);
+    setSong((cur) => (cur ? { ...cur, stemCount: stems.length } : cur));
+  }
+
+  async function splitParts() {
+    const stems = stemsRef.current;
+    const i = stems.findIndex((s) => s.name === "Full mix");
+    if (i < 0) return;
+    setBusy(true);
+    setStatus("Splitting into parts…");
+    try {
+      const parts = await quickSplit(sumMono([stems[i].channels]), engine().sampleRate);
+      const made = parts.map((p, k) => ({ name: QUICK_PARTS[k], channels: [p] }));
+      await replaceStems([...stems.slice(0, i), ...made, ...stems.slice(i + 1)]);
+      setStatus("Split into three parts. They add back up to the original; mute or turn down what you do not want.");
+    } catch {
+      setError("Could not split that recording.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addClick() {
+    if (!song?.bpm || !bpb) return;
+    const stems = stemsRef.current;
+    const click = makeClick(song.bpm, bpb, song.downbeat ?? 0, stems[0].channels[0].length, engine().sampleRate);
+    const stem: Stem = { name: "Click", channels: [click] };
+    await engine().addStem(stem);
+    await refreshViews([...stems, stem]);
+    setStemNames((p) => [...p, stem.name]);
+    setLevels((p) => [...p, 100]);
+    setMuted((p) => [...p, false]);
+    setSong({ ...song, stemCount: song.stemCount + 1 });
+    setStatus("Click track added as a part. Mute it before you export.");
+  }
+
+  /** A typed or halved/doubled tempo. An existing click track is rebuilt to match. */
+  async function changeBpm(bpm: number) {
+    if (!song) return;
+    const next = { ...song, bpm, timeSig: song.timeSig ?? "4/4" };
+    setSong(next);
+    const stems = stemsRef.current;
+    const ci = stems.findIndex((s) => s.name === "Click");
+    if (ci >= 0) {
+      const click = makeClick(bpm, beatsPerBar(next.timeSig) ?? 4, song.downbeat ?? 0, stems[0].channels[0].length, engine().sampleRate);
+      await replaceStems(stems.map((s, k) => (k === ci ? { name: "Click", channels: [click] } : s)));
+    }
+  }
+
   /** Export what you hear: every part at its level, muted parts left out. */
   function exportTake() {
     const stems = stemsRef.current;
@@ -295,6 +371,7 @@ export function App() {
             loop={loop}
             looping={looping}
             bpm={song.bpm}
+            downbeat={song.downbeat ?? 0}
             beatsPerBar={bpb}
             sampleRate={engineRef.current?.sampleRate ?? 48000}
             getLayers={() => layersRef.current}
@@ -310,9 +387,20 @@ export function App() {
             onSetOut={() => editLoop(setOut(loop, position, song.duration, defaultLen()))}
             onSnap={() => {
               if (!loop || !song.bpm || !bpb) return;
-              const [start, end] = snapLoopToBars(loop.start, loop.end, song.bpm, bpb, song.duration);
+              const [start, end] = snapLoopToBars(loop.start, loop.end, song.bpm, bpb, song.duration, song.downbeat ?? 0);
               editLoop({ start, end });
             }}
+          />
+        )}
+        {song && (
+          <SongTools
+            song={song}
+            busy={busy || recording}
+            canSplit={stemNames.includes("Full mix")}
+            hasClick={stemNames.includes("Click")}
+            onBpm={changeBpm}
+            onSplit={splitParts}
+            onClick={addClick}
           />
         )}
         {busy && <p className="empty" role="status">Reading the recording…</p>}

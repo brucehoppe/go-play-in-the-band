@@ -31,6 +31,8 @@ pub fn compute_peaks(samples: &[f32], buckets: usize) -> Vec<f32> {
     out
 }
 
+pub mod analysis;
+
 use wasm_bindgen::prelude::*;
 
 /// Browser entry point: `peaks(Float32Array, buckets) -> Float32Array`.
@@ -166,6 +168,24 @@ pub fn stretch(input: &[f32], ratio: f32, frame: usize, seek: usize) -> Vec<f32>
 pub fn stretch_mono(samples: &[f32], speed: f32, sample_rate: f32) -> Vec<f32> {
     let frame = ((sample_rate * 0.04) as usize).next_power_of_two().max(256);
     stretch(samples, speed, frame, frame / 4)
+}
+
+/// Browser entry point: `[bpm, firstBeatSeconds]`, zeros when no tempo is found.
+#[wasm_bindgen]
+pub fn tempo(samples: &[f32], sample_rate: f32) -> Vec<f32> {
+    analysis::detect_tempo(samples, sample_rate).to_vec()
+}
+
+/// Browser entry point: 0..11 C..B major, 12..23 C..B minor, -1 unknown.
+#[wasm_bindgen]
+pub fn key(samples: &[f32], sample_rate: f32) -> i32 {
+    analysis::detect_key(samples, sample_rate)
+}
+
+/// Browser entry point: `[percussive | bass | harmonic]`, each as long as the input.
+#[wasm_bindgen]
+pub fn split(samples: &[f32], sample_rate: f32) -> Vec<f32> {
+    analysis::quick_split(samples, sample_rate, 200.0)
 }
 
 #[cfg(test)]

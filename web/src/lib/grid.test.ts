@@ -56,3 +56,13 @@ describe("grid", () => {
     expect(lines[4].sec).toBeCloseTo(4.8, 9);
   });
 });
+
+describe("first downbeat offset", () => {
+  it("shifts grid lines, snapping and bar labels", () => {
+    const lines = gridLines(0, 2.6, 120, 4, 0.5);
+    expect(lines[0]).toEqual({ sec: 0.5, bar: 1, beat: 1 });
+    expect(lines.find((l) => l.bar === 2)?.sec).toBeCloseTo(2.5);
+    expect(snapLoopToBars(2.4, 4.6, 120, 4, 60, 0.5)).toEqual([2.5, 4.5]);
+    expect(barLabel(2.5, 4.5, 120, 4, 0.5)).toBe("bar 2");
+  });
+});

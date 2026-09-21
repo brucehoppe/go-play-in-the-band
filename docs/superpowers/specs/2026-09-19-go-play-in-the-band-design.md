@@ -104,4 +104,12 @@ this section records where the build differs from it.
 - Overdub (added after the original design): a take is placed on the song timeline at the
   position recording started and added as a mono stem, reusing the multi-stem mixer. Takes
   recorded while a loop wraps are laid out linearly, not folded back onto the loop.
+- Analysis moved into the browser (added after the original design): tempo, first beat and
+  key are estimated in `dsp-core` on `rustfft` (spectral-flux onsets and autocorrelation;
+  chroma against the Krumhansl profiles), so they no longer need the Python backend. The
+  backend's `/analyse` remains but the app does not call it. The quick split is
+  harmonic/percussive median filtering plus a 200 Hz bass cut, on the mono mix.
+- Crates considered and not added: `symphonia` (the browser already decodes), `dasp` and
+  `spectrum-analyzer` (nothing here needs them yet), `pitch-detection` (would suit a tuner or
+  a note display, which is not built).
 

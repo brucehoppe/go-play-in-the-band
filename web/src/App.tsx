@@ -17,6 +17,9 @@ import { BandMixer } from "./ui/BandMixer";
 import { Header } from "./ui/Header";
 import { LoopPanel } from "./ui/LoopPanel";
 import { SongPanel } from "./ui/SongPanel";
+import { AudioDevices } from "./ui/AudioDevices";
+import { loadChoice, saveChoice } from "./lib/devices";
+import type { AudioChoice } from "./lib/devices";
 import { SongTools } from "./ui/SongTools";
 import { TransportBar } from "./ui/TransportBar";
 
@@ -44,6 +47,8 @@ export function App() {
   const [preparing, setPreparing] = useState(false);
   const [recording, setRecording] = useState(false);
   const stemsRef = useRef<Stem[]>([]);
+  const fileRef = useRef<File | null>(null);
+  const [choice, setChoice] = useState<AudioChoice>(loadChoice);
   const takeCountRef = useRef(0);
   const recordFromRef = useRef(0);
   const [latency, setLatency] = useState(() => {
@@ -62,6 +67,7 @@ export function App() {
   function engine(): Engine {
     if (!engineRef.current) {
       const e = new Engine();
+      e.choice = choice;
       e.onPosition = (s, p) => {
         setPosition(s);
         setPlaying(p);
@@ -151,7 +157,11 @@ export function App() {
     }
   }
 
-  const openFile = (file: File) =>
+  const openFile = (file: File) => {
+    fileRef.current = file;
+    return openFileParts(file);
+  };
+  const openFileParts = (file: File) =>
     open(file.name, async (e) => {
       // With the local backend running, split the recording into parts; otherwise it stays one "Full mix".
       if (await serverAvailable()) {
@@ -299,6 +309,44 @@ export function App() {
     }
   }
 
+  /** Real instrument stems need the local backend; say so right here if it is not running. */
+  async function splitInstruments() {
+    const file = fileRef.current;
+    if (!file) {
+      setStatus("Instrument split works on a loaded recording, not on takes.");
+      return;
+    }
+    if (!(await serverAvailable())) {
+      setStatus("The local backend is not running. Start it with scripts/run-server.sh (after scripts/install.sh), then press Instruments again. Quick split works without it.");
+      return;
+    }
+    await openFileParts(file);
+  }
+
+  async function changeDevices(next: AudioChoice) {
+    setChoice(next);
+    saveChoice(next);
+    const e = engine();
+    e.choice = next;
+    if (next.output !== choice.output) {
+      try {
+        await e.setOutput(next.output);
+      } catch {
+        setError("Could not switch to that output.");
+      }
+    }
+  }
+
+  /** Open the input once so the browser will reveal device names, then let it go. */
+  async function allowInput() {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+      s.getTracks().forEach((t) => t.stop());
+    } catch {
+      setError("Could not use the microphone. Allow access and try again.");
+    }
+  }
+
   async function addClick() {
     if (!song?.bpm || !bpb) return;
     const stems = stemsRef.current;
@@ -396,13 +444,19 @@ export function App() {
           <SongTools
             song={song}
             busy={busy || recording}
-            canSplit={stemNames.includes("Full mix")}
+            speed={speed}
             hasClick={stemNames.includes("Click")}
             onBpm={changeBpm}
-            onSplit={splitParts}
             onClick={addClick}
           />
         )}
+        <AudioDevices
+          choice={choice}
+          canPickOutput={"setSinkId" in AudioContext.prototype}
+          disabled={recording}
+          onChange={(c) => void changeDevices(c)}
+          onAllow={allowInput}
+        />
         {busy && <p className="empty" role="status">Reading the recording…</p>}
         {error && <p className="error" role="alert">{error}</p>}
         </div>
@@ -414,6 +468,9 @@ export function App() {
             guitar={guitarIndex}
             onLevel={setLevel}
             onMute={toggleMute}
+            onQuickSplit={stemNames.includes("Full mix") ? () => void splitParts() : undefined}
+            onStemSplit={() => void splitInstruments()}
+            busy={busy || recording}
           />
         )}
         </div>
@@ -429,6 +486,7 @@ export function App() {
         speed={speed}
         preparing={preparing}
         onSpeed={changeSpeed}
+        bpm={song?.bpm ?? null}
         recording={recording}
         hasTake={song !== null}
         onRecord={toggleRecord}

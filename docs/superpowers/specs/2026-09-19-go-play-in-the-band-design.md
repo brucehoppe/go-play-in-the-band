@@ -116,4 +116,7 @@ this section records where the build differs from it.
   `web/dist` embedded (`include_dir`), bound to 127.0.0.1:8766 (any free port if taken). It
   injects a `gpitb-local` meta tag so the page sends a heartbeat; the hosted demo never does.
   It exits 150 s after the last heartbeat. No Go, Electron or Tauri.
+- Devices: the recorder asks for the chosen `deviceId` in stereo and picks Input 1 or 2 with a
+  channel splitter (as minor-pentatonic-go does); output uses `AudioContext.setSinkId`. The
+  choice is stored in localStorage and validated on read. Tempo is a 50 to 125% slider.
 

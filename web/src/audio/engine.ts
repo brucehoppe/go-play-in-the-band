@@ -1,5 +1,7 @@
 import bandWorkletUrl from "./band.worklet.ts?worker&url";
 import { measureLatency } from "./take";
+import { DEFAULT_CHOICE } from "../lib/devices";
+import type { AudioChoice } from "../lib/devices";
 import { Recorder } from "./recorder";
 import { stretchChannels } from "./stretch";
 import type { Stem } from "../types";
@@ -55,7 +57,7 @@ export class Engine {
     this.post(stems);
   }
 
-  /** Re-render every stem at `speed` (0.5..1) and swap it in, keeping position, loop, gains and play state. */
+  /** Re-render every stem at `speed` (0.5..1.25) and swap it in, keeping position, loop, gains and play state. */
   async setSpeed(speed: number): Promise<void> {
     if (speed === this.speed || this.source.length === 0) return;
     await this.render(speed);
@@ -114,8 +116,22 @@ export class Engine {
     return measureLatency(heard, Math.round((at - started) * this.ctx.sampleRate));
   }
 
+  /** Input device and channel for takes and calibration. */
+  choice: AudioChoice = DEFAULT_CHOICE;
+
   recorder(): Recorder {
-    return new Recorder(this.ctx);
+    return new Recorder(this.ctx, this.choice);
+  }
+
+  /** True when the browser can send sound to a chosen output (Chrome and Edge). */
+  get canPickOutput(): boolean {
+    return "setSinkId" in AudioContext.prototype;
+  }
+
+  /** Play through a chosen output, e.g. a USB headphone amp. Empty string is the system default. */
+  async setOutput(deviceId: string): Promise<void> {
+    const ctx = this.ctx as AudioContext & { setSinkId?: (id: string) => Promise<void> };
+    await ctx.setSinkId?.(deviceId);
   }
 
   async play(): Promise<void> {

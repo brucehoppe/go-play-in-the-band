@@ -5,15 +5,15 @@ import type { SongInfo } from "../types";
 interface Props {
   song: SongInfo;
   busy: boolean;
-  canSplit: boolean;
+  /** Playback speed, 0.5..1, to show the tempo you actually hear. */
+  speed: number;
   hasClick: boolean;
   onBpm: (bpm: number) => void;
-  onSplit: () => void;
   onClick: () => void;
 }
 
-/** Helpers for building a song: tempo (estimated, editable), key, a click track and a quick split. */
-export function SongTools({ song, busy, canSplit, hasClick, onBpm, onSplit, onClick }: Props) {
+/** Helpers for building a song: tempo (estimated, editable), key and a click track. */
+export function SongTools({ song, busy, speed, hasClick, onBpm, onClick }: Props) {
   const [text, setText] = useState(song.bpm ? String(song.bpm) : "");
   useEffect(() => setText(song.bpm ? String(song.bpm) : ""), [song.bpm]);
   const commit = () => {
@@ -26,7 +26,7 @@ export function SongTools({ song, busy, canSplit, hasClick, onBpm, onSplit, onCl
       <h2>Song tools</h2>
       <div className="tools-row">
         <label>
-          Tempo (BPM)
+          Song tempo (BPM)
           <input
             inputMode="decimal"
             value={text}
@@ -40,17 +40,16 @@ export function SongTools({ song, busy, canSplit, hasClick, onBpm, onSplit, onCl
         <button disabled={!song.bpm || song.bpm * 2 > 300} onClick={() => song.bpm && onBpm(song.bpm * 2)}>2×</button>
         <span className="tools-key">Key {song.key ?? "–"}</span>
       </div>
+      <p className="hint">
+        This is the song's own tempo, used for the bar grid and the click. It does not change playback: use the tempo slider
+        in the bar below for that.{song.bpm ? ` You are hearing ${Math.round(song.bpm * speed)} BPM (${Math.round(speed * 100)}%).` : ""}
+      </p>
       {song.estimated && (
         <p className="hint">Tempo and key are estimates from the audio. If the grid feels twice too fast or slow, use ½× or 2×, or type the tempo.</p>
       )}
       <div className="tools-row">
         <button disabled={busy || !song.bpm || hasClick} onClick={onClick}>Add click track</button>
-        <button disabled={busy || !canSplit} onClick={onSplit}>Quick split into parts</button>
       </div>
-      <p className="hint">
-        Quick split is plain signal processing, not AI: it pulls apart drums-like hits, low bass and everything else. It cannot
-        lift out one instrument such as the guitar; that needs the optional local backend.
-      </p>
     </section>
   );
 }

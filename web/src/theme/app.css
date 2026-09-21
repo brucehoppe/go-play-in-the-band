@@ -102,3 +102,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .tools-key { margin-left: auto; align-self: center; }
 .tools .hint { font-size: 0.85rem; opacity: 0.7; margin: 4px 0; }
 .tools { margin-top: 16px; }
+.tools-row select { min-height: 40px; max-width: 16rem; padding: 0 8px; background: var(--panel); color: inherit; border: 1px solid var(--border); border-radius: 8px; font: inherit; }
+.split-card .presets { display: flex; gap: 8px; flex-wrap: wrap; }
+.tempo-slider { display: grid; gap: 2px; font-size: 0.8rem; min-width: 150px; }
+.tempo-slider input { width: 100%; accent-color: var(--amber); }

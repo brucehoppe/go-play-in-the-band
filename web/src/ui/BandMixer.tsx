@@ -10,6 +10,10 @@ interface Props {
   guitar: number;
   onLevel: (stem: number, level: number) => void;
   onMute: (stem: number) => void;
+  /** Split the full mix right here. Absent when there is nothing to split. */
+  onQuickSplit?: () => void;
+  onStemSplit?: () => void;
+  busy?: boolean;
 }
 
 function Slider({
@@ -45,8 +49,7 @@ export function BandMixer({
   muted,
   guitar,
   onLevel,
-  onMute,
-}: Props) {
+  onMute, onQuickSplit, onStemSplit, busy }: Props) {
   return (
     <aside className="panel band-panel" aria-label="The band">
       <h2>The band</h2>
@@ -82,11 +85,23 @@ export function BandMixer({
           </p>
         </div>
       ) : (
-        <div className="your-part disabled" aria-disabled="true">
+        <div className="your-part split-card">
           <p className="part-tag">YOUR PART</p>
-          <p className="hint">
-            To split a recording into parts, run the optional local backend (see the README)
-          </p>
+          {onQuickSplit ? (
+            <>
+              <p className="hint">This is one full mix. Split it so you can turn parts down.</p>
+              <div className="presets">
+                <button disabled={busy} onClick={onQuickSplit} title="Drums-like, low bass and everything else. Works right here, in a few seconds.">
+                  Quick split
+                </button>
+                <button disabled={busy} onClick={onStemSplit} title="Guitar, bass, drums, keys, voice. Uses Demucs in the local backend; takes minutes.">
+                  Instruments
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="hint">Turn parts down with the faders below, then play your own.</p>
+          )}
         </div>
       )}
       <ul className="stems">

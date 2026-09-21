@@ -4,7 +4,7 @@ import tempfile
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from cache import cache_dir, content_hash
 
@@ -65,3 +65,17 @@ async def separate(file: UploadFile = File(...)) -> JSONResponse:
     demucs.separate.main(["-n", "htdemucs_6s", "-o", str(out), "--filename", "{stem}.{ext}", str(src)])
     stems = sorted(p.name for p in out.rglob("*.wav"))
     return JSONResponse({"hash": digest, "stems": stems, "cached": False})
+
+
+@app.get("/stems/{digest}/{name}")
+def stem(digest: str, name: str) -> FileResponse:
+    if not name.endswith(".wav") or not name[:-4].isalnum():
+        raise HTTPException(400, "Bad stem name")
+    try:
+        root = cache_dir(CACHE_ROOT, digest)
+    except ValueError:
+        raise HTTPException(400, "Bad hash")
+    found = next(root.rglob(name), None)
+    if found is None:
+        raise HTTPException(404, "No such stem")
+    return FileResponse(found, media_type="audio/wav")

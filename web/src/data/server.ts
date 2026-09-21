@@ -24,3 +24,10 @@ export async function separate(file: File): Promise<SeparateResult> {
   if (!r.ok) throw new Error(r.status === 501 ? "Install demucs to split a recording into parts." : "The local backend could not separate that file.");
   return r.json();
 }
+
+/** Fetch one separated stem as a WAV file. */
+export async function fetchStem(hash: string, name: string): Promise<File> {
+  const r = await fetch(`${BASE}/stems/${hash}/${encodeURIComponent(name)}`);
+  if (!r.ok) throw new Error("Could not fetch a separated part.");
+  return new File([await r.blob()], name, { type: "audio/wav" });
+}

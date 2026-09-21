@@ -20,3 +20,11 @@ def test_cache_dir_rejects_path_tricks(tmp_path):
     with pytest.raises(ValueError):
         cache_dir(tmp_path, "../../etc")
     assert cache_dir(tmp_path, content_hash(b"x")).is_dir()
+
+
+def test_stem_rejects_bad_names():
+    good = "a" * 64
+    assert client.get(f"/stems/{good}/..%2Fx.wav").status_code in (400, 404)
+    assert client.get(f"/stems/{good}/x.txt").status_code == 400
+    assert client.get("/stems/nothex/x.wav").status_code == 400
+    assert client.get(f"/stems/{good}/missing.wav").status_code == 404

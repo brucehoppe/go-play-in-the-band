@@ -4,6 +4,7 @@ import { alignTake, encodeWav, mixTakeWithBand } from "./audio/take";
 import type { Recorder } from "./audio/recorder";
 import { sumMono } from "./audio/mono";
 import { computePeaks } from "./audio/peaks";
+import { fetchStem, separate, serverAvailable } from "./data/server";
 import { loadTake, saveTake } from "./data/takes";
 import { DEMO_INFO, DEMO_SECTIONS, GUITAR_STEM, synthDemoStems } from "./data/demo";
 import { barLabel, beatsPerBar, snapLoopToBars } from "./lib/grid";
@@ -115,7 +116,22 @@ export function App() {
     }
   }
 
-  const openFile = (file: File) => open(file.name, async (e) => [{ name: "Full mix", channels: await e.decode(file) }], UNKNOWN);
+  const openFile = (file: File) =>
+    open(file.name, async (e) => {
+      // With the local backend running, split the recording into parts; otherwise it stays one "Full mix".
+      if (await serverAvailable()) {
+        try {
+          setStatus("Splitting into parts on this computer. This can take a few minutes.");
+          const result = await separate(file);
+          return await Promise.all(
+            result.stems.map(async (n) => ({ name: n.replace(/\.wav$/, ""), channels: await e.decode(await fetchStem(result.hash, n)) })),
+          );
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Could not split that recording.");
+        }
+      }
+      return [{ name: "Full mix", channels: await e.decode(file) }];
+    }, UNKNOWN);
   const openDemo = () =>
     open(DEMO_INFO.name, async (e) => synthDemoStems(e.sampleRate), {
       bpm: DEMO_INFO.bpm,

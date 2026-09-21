@@ -1,6 +1,6 @@
 fastapi>=0.141.1
 uvicorn>=0.53.0
 python-multipart>=0.0.32
-# optional, large (scripts/install.sh --stems): demucs, soundfile, librosa
+# scripts/install also adds the large ones, which the tests do not need: demucs, soundfile, librosa
 pytest>=9.1.1
 httpx>=0.28.1

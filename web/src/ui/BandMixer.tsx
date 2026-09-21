@@ -10,6 +10,9 @@ interface Props {
   guitar: number;
   onLevel: (stem: number, level: number) => void;
   onMute: (stem: number) => void;
+  /** The one part being heard alone, or null. */
+  solo: number | null;
+  onSolo: (stem: number) => void;
   /** Split the full mix right here. Absent when there is nothing to split. */
   onQuickSplit?: () => void;
   onStemSplit?: () => void;
@@ -49,7 +52,7 @@ export function BandMixer({
   muted,
   guitar,
   onLevel,
-  onMute, onQuickSplit, onStemSplit, busy }: Props) {
+  onMute, onQuickSplit, onStemSplit, busy, solo, onSolo }: Props) {
   return (
     <aside className="panel band-panel" aria-label="The band">
       <h2>The band</h2>
@@ -79,6 +82,9 @@ export function BandMixer({
                 {p.label}
               </button>
             ))}
+            <button className="toggle preset" aria-pressed={solo === guitar} title="Hear only the guitar, to learn the part" onClick={() => onSolo(guitar)}>
+              Solo guitar
+            </button>
           </div>
           <p className="hint guitar-hint" aria-live="polite">
             {guitarHint(levels[guitar])}
@@ -113,6 +119,15 @@ export function BandMixer({
                 <output className="mono readout" htmlFor={`stem-${i}`}>
                   {levels[i]}%
                 </output>
+                <button
+                  className="toggle mute"
+                  aria-pressed={solo === i}
+                  aria-label={`Solo ${name}: hear only this part`}
+                  title="Solo: hear only this part"
+                  onClick={() => onSolo(i)}
+                >
+                  S
+                </button>
                 <button
                   className="toggle mute"
                   aria-pressed={muted[i]}

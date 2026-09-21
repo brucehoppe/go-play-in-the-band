@@ -219,6 +219,17 @@ mod stretch_tests {
     }
 
     #[test]
+    fn quarter_speed_keeps_pitch_and_level() {
+        let x = sine(220.0, 44100.0, 1.0);
+        let y = stretch(&x, 0.25, 2048, 512);
+        assert_eq!(y.len(), 176400);
+        let f_out = zero_crossings(&y) as f32 / (y.len() as f32 / 44100.0);
+        assert!((220.0 - f_out).abs() / 220.0 < 0.02, "{f_out}");
+        let peak = y[4096..y.len() - 4096].iter().fold(0.0f32, |m, v| m.max(v.abs()));
+        assert!(peak > 0.4 && peak < 0.6, "{peak}");
+    }
+
+    #[test]
     fn faster_than_original_shortens_and_keeps_pitch() {
         let x = sine(220.0, 44100.0, 1.0);
         let y = stretch(&x, 1.25, 2048, 512);

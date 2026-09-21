@@ -22,7 +22,7 @@ interface Props {
   onCalibrate: () => void;
 }
 
-const SPEEDS = [0.5, 0.75, 0.9, 1];
+const SPEEDS = [0.25, 0.5, 0.75, 1];
 
 export function TransportBar({ position, duration, playing, disabled, canRecord, onToggle, onRewind, speed, preparing, onSpeed, bpm, recording, hasTake, onRecord, onExport, onCalibrate }: Props) {
   // The slider moves freely; the audio is re-rendered once, when you let go.
@@ -43,7 +43,8 @@ export function TransportBar({ position, duration, playing, disabled, canRecord,
       </button>
       <button disabled={disabled || recording} onClick={onCalibrate}>Calibrate</button>
       <button disabled={!hasTake || recording} onClick={onExport}>Export mix</button>
-      <div className="speeds" role="group" aria-label="Speed">
+      <div className="speeds" role="group" aria-label="Slow down or speed up">
+        <span className="speeds-label">Slow down</span>
         {SPEEDS.map((v) => (
           <button
             key={v}
@@ -61,7 +62,7 @@ export function TransportBar({ position, duration, playing, disabled, canRecord,
           </span>
           <input
             type="range"
-            min={50}
+            min={25}
             max={125}
             step={5}
             value={drag}

@@ -14,3 +14,8 @@ export function guitarHint(level: number): string {
 export function stemLabel(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
+
+/** Whether a part is silent: it is muted, or another part is soloed. */
+export function isSilent(i: number, muted: boolean[], solo: number | null): boolean {
+  return (solo !== null && solo !== i) || (solo !== i && (muted[i] ?? false));
+}

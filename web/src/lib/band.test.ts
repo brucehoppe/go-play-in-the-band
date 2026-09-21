@@ -27,3 +27,15 @@ describe("stemLabel", () => {
     expect(stemLabel("Full mix")).toBe("Full mix");
   });
 });
+
+import { isSilent } from "./band";
+describe("isSilent", () => {
+  it("follows mutes when nothing is soloed", () => {
+    expect(isSilent(0, [true, false], null)).toBe(true);
+    expect(isSilent(1, [true, false], null)).toBe(false);
+  });
+  it("solo silences every other part and is heard even if muted", () => {
+    expect(isSilent(0, [false, false], 1)).toBe(true);
+    expect(isSilent(1, [false, true], 1)).toBe(false);
+  });
+});

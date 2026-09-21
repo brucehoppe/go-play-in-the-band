@@ -57,7 +57,7 @@ export class Engine {
     this.post(stems);
   }
 
-  /** Re-render every stem at `speed` (0.5..1.25) and swap it in, keeping position, loop, gains and play state. */
+  /** Re-render every stem at `speed` (0.25..1.25) and swap it in, keeping position, loop, gains and play state. */
   async setSpeed(speed: number): Promise<void> {
     if (speed === this.speed || this.source.length === 0) return;
     await this.render(speed);

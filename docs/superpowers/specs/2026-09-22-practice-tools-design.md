@@ -74,15 +74,13 @@ with no backend.
 - Second demo song: "Demo: E waltz", 3/4 at 90 BPM in E major, same synth, so 3/4 and
   transpose show. The header offers both demos.
 - Mac app icon: `scripts/build.sh` renders `web/public/favicon.svg` to an `.icns` with
-  `sips` and `iconutil` when available. Signing and notarising run only when
-  `GPITB_SIGN_ID` and `GPITB_NOTARY_PROFILE` are set; documented, not run here.
+  `sips` and `iconutil` when available. No signing or notarising (dropped by the user).
 - `scripts/demo-gif.mjs`: drives the built app in headless Chrome like the screenshot
   script and writes `docs/demo.gif` with an in-repo GIF encoder (no dependencies).
   Linked at the top of the README.
 
 ## Not done here
 - Nothing is judged by ear; no real microphone or interface.
-- Notarising needs the user's Apple credentials.
 - Tempo detection itself is unchanged; the user corrects it with the new tools.
 
 ## Testing

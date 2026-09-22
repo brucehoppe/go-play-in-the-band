@@ -86,3 +86,15 @@ with no backend.
 ## Testing
 Vitest for every pure module; Rust tests for pitch shift, chords and pitch detection;
 the screenshot script's headless-Chrome run checks for console errors at the end.
+
+## As built (2026-09-22)
+
+Everything above is in, with these differences:
+
+- Chroma for chords uses an 8192-point frame (5 Hz bins); the 2048-point frame put B's energy in the B-flat bin at low pitches.
+- `Transport.render` takes the sample rate so the count-in ticks are synthesised at the right pitch; the worklet passes it.
+- Take rows show "Only this take" only when there are two or more takes.
+- The demo picker is a select in the header (two demos); the screenshot driver moved to `scripts/lib/chrome.mjs` and gained `select`, `type` and `check` helpers because of it.
+- The GIF is six frames at 880 px, 290 KB, from `scripts/lib/gif.mjs` (PNG decode with zlib, popularity palette, LZW).
+- The Mac icon comes from `scripts/make-icon.sh` (qlmanage, sips, iconutil); no signing.
+- Not verified by ear or on hardware; see `docs/STATUS.md`.

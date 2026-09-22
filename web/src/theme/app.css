@@ -154,3 +154,5 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .count-in-tag { color: var(--amber); font-size: 0.8rem; margin-left: 8px; }
 .demo-pick select { min-height: 44px; padding: 0 12px; background: var(--raised); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font: inherit; cursor: pointer; }
 .demo-pick select:hover { border-color: var(--amber); }
+.tools-row label.toggle-line { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+.tools-row label.toggle-line input { width: 18px; height: 18px; min-height: 0; }

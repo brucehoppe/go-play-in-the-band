@@ -10,23 +10,29 @@ Coded by Bruce Hoppe
 A play-along practice app for guitarists: load a recording, turn the guitar down, loop a hard
 section, slow it down, and record yourself with the band. TypeScript, plus Rust compiled to WebAssembly.
 
-![The demo song: waveform, a four-bar loop, the band mixer with the guitar muted, speed at 75%](docs/screenshots/03-loop-mute-75.png)
+![Load the demo, loop the solo, mute the guitar, slow down, record a take, turn on progressive tempo](docs/demo.gif)
 
-More screenshots: [docs/screenshots](docs/screenshots). Retake them with `node scripts/screenshots.mjs`.
+More screenshots: [docs/screenshots](docs/screenshots). Retake them with `node scripts/screenshots.mjs`;
+remake the animation with `node scripts/demo-gif.mjs`.
 
 ## Features
 
-- **Play**: load WAV, MP3, FLAC or M4A; whole-song waveform; click to seek.
-- **Loop**: drag IN/OUT, snap to bars, sample-accurate with a crossfade.
+- **Play**: load WAV, MP3, FLAC or M4A; whole-song waveform; click to seek. Recent songs reopen after a reload.
+- **Loop**: drag IN/OUT, snap to bars, sample-accurate with a crossfade. Save loops by name. Count-in.
+- **Progressive tempo**: start slow and go up a step every N passes of the loop, until full speed.
 - **Mix**: a fader and mute per part; Mute / Quiet guide / Full presets for the guitar.
 - **Slow down**: 25 to 125% at the same pitch, with the BPM you hear. Our own stretcher keeps each pick attack crisp.
+- **Transpose**: up to 12 semitones either way at the same speed, for songs tuned down or with a capo.
 - **Solo**: hear one part alone; slow it down to pick it out.
-- **Record and overdub**: each take becomes a new part; Record with nothing loaded starts a song.
-- **Audio devices**: record from a USB interface (Input 1, 2 or both); play through a USB headphone amp.
-- **Song tools**: estimated tempo, first beat and key; editable tempo; click track.
+- **Record and overdub**: each take becomes a new part, at any speed (a slowed take is brought back to song time).
+  Recording over a loop turns every pass into its own take; compare them with "Only this take", delete the misses.
+  Record with nothing loaded starts a song.
+- **Audio devices**: record from a USB interface (Input 1, 2 or both); play through a USB headphone amp; software monitor with the delay shown.
+- **Tuner**: chromatic, on your input, plus reference tones for the open strings.
+- **Song tools**: estimated tempo, first beat, key and chords per bar; tap tempo; time signature; set bar 1; click track.
 - **Split**: right in the band panel. Quick split (drums-like, low bass, the rest) works anywhere.
 - **Isolate the guitar**: Instruments splits a song into guitar, bass, drums, piano, vocals and other with Demucs, on your computer. Comes with the local app.
-- **Export mix**: what you hear, as a WAV.
+- **Export**: the mix as one WAV, or every part as WAVs in a zip. Save the whole project (recording, takes, loops, mix) as one zip and load it back.
 - **Private**: nothing you load leaves your computer. Works offline after one visit.
 
 ## Local app
@@ -54,6 +60,9 @@ Needs Node.js 24+, Rust stable with the `wasm32-unknown-unknown` target, and `wa
     npm install
     npm run dev
     npm test
+
+Browser check, against a build (`npm run build && npx vite preview --port 4199`): `node scripts/smoke.mjs`
+walks the practice tools in headless Chrome and fails on any console error.
 
 ## More
 

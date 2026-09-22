@@ -80,8 +80,15 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>$VERSION</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>LSUIElement</key><true/>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
 </dict></plist>
 PLIST
+# App icon, rendered from the site's favicon with the tools macOS ships (skipped if any is missing).
+if sh scripts/make-icon.sh "$APP/Contents/Resources/AppIcon.icns" >/dev/null 2>&1; then
+  echo "    Icon: AppIcon.icns"
+else
+  echo "    (no icon: qlmanage, sips or iconutil failed)"
+fi
 # Ad-hoc signature so macOS will run a locally built app.
 codesign --force --sign - "$APP" >/dev/null 2>&1 || echo "    (codesign not available; the app is unsigned)"
 echo "==> Built $APP ($(du -sh "$APP" | cut -f1))"

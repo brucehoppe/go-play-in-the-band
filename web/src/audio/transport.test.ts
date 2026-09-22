@@ -326,4 +326,46 @@ describe("Transport with several stems", () => {
     const fade = (s: Float32Array) => s[56] * cs + s[20 - 8 + 4] * sn;
     expect(out[0][0]).toBeCloseTo(fade(s0[0]) + 0.5 * fade(s1[0]), 4);
   });
+
+  it("counts loop wraps", () => {
+    const t = new Transport(10);
+    t.setLoop(2, 5);
+    t.seek(2);
+    t.play();
+    t.render([src], block(7)); // 2,3,4 | 2,3,4 | 2
+    expect(t.wraps).toBe(2);
+    t.setLoop(2, 5);
+    expect(t.wraps).toBe(0);
+  });
+
+  it("plays count-in ticks without moving, then the song", () => {
+    const t = new Transport(10);
+    t.countIn(2, 4); // 8 frames of ticks
+    t.play();
+    expect(t.countingIn).toBe(true);
+    const a = block(6);
+    t.render([src], a, undefined, 100); // tick is 3 frames long at 100 Hz
+    expect(t.position).toBe(0);
+    expect(a[0][0]).toBe(0); // sin(0)
+    expect(Math.abs(a[0][1])).toBeGreaterThan(0);
+    expect(a[0][3]).toBe(0); // between ticks
+    // Second beat starts at frame 4: a lower tick, still silent at its first sample.
+    const b = block(6);
+    t.render([src], b, undefined, 100); // frames 6,7 are ticks; 8.. is the song
+    expect(t.countingIn).toBe(false);
+    expect(Array.from(b[0].subarray(2))).toEqual([1, 2, 3, 4]);
+    expect(t.position).toBe(4);
+  });
+
+  it("counts in before a loop too", () => {
+    const t = new Transport(10, 0); // no wrap crossfade, so the values are exact
+    t.setLoop(2, 5);
+    t.seek(2);
+    t.countIn(1, 2);
+    t.play();
+    const out = block(6);
+    t.render([src], out, undefined, 100);
+    expect(Array.from(out[0].subarray(2))).toEqual([3, 4, 5, 3]);
+    expect(t.wraps).toBe(1);
+  });
 });

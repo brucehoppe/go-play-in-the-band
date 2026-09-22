@@ -284,6 +284,64 @@ pub fn stretch_mono(samples: &[f32], speed: f32, sample_rate: f32) -> Vec<f32> {
     stretch_tuned(samples, speed, sample_rate)
 }
 
+/// Read `x` at a fractional step, linearly interpolated: `step` 2 gives half the length and
+/// twice the pitch.
+pub fn resample(x: &[f32], step: f64) -> Vec<f32> {
+    if x.is_empty() || !(step > 0.0) {
+        return Vec::new();
+    }
+    let out_len = (x.len() as f64 / step).round().max(1.0) as usize;
+    (0..out_len)
+        .map(|i| {
+            let p = i as f64 * step;
+            let k = p.floor() as usize;
+            let frac = (p - k as f64) as f32;
+            let a = x.get(k).copied().unwrap_or(0.0);
+            let b = x.get(k + 1).copied().unwrap_or(a);
+            a + (b - a) * frac
+        })
+        .collect()
+}
+
+/// Speed and pitch in one pass: stretch every channel by `speed / f` (f = 2^(semitones/12)),
+/// then resample by `f`, so the result is `1/speed` as long and `semitones` higher.
+pub fn render_channels(channels: &[&[f32]], speed: f32, semitones: f32, sample_rate: f32) -> Vec<Vec<f32>> {
+    let f = 2f64.powf(semitones as f64 / 12.0);
+    let frame = ((sample_rate * 0.04) as usize).next_power_of_two().max(256);
+    let stretched = stretch_channels(channels, (speed as f64 / f) as f32, frame, frame / 4);
+    if (f - 1.0).abs() < 1e-9 {
+        return stretched;
+    }
+    stretched.iter().map(|c| resample(c, f)).collect()
+}
+
+/// Browser entry point: a mono part at `speed` and `semitones`.
+#[wasm_bindgen]
+pub fn render_mono(samples: &[f32], speed: f32, semitones: f32, sample_rate: f32) -> Vec<f32> {
+    render_channels(&[samples], speed, semitones, sample_rate).remove(0)
+}
+
+/// Browser entry point: a stereo part at `speed` and `semitones`, left then right.
+#[wasm_bindgen]
+pub fn render_stereo(left: &[f32], right: &[f32], speed: f32, semitones: f32, sample_rate: f32) -> Vec<f32> {
+    let mut parts = render_channels(&[left, right], speed, semitones, sample_rate);
+    let mut out = parts.remove(0);
+    out.extend(parts.remove(0));
+    out
+}
+
+/// Browser entry point: one chord index per bar (0..11 major, 12..23 minor, -1 none).
+#[wasm_bindgen]
+pub fn chords(samples: &[f32], sample_rate: f32, bpm: f32, downbeat: f32, beats_per_bar: u32) -> Vec<i32> {
+    analysis::detect_chords(samples, sample_rate, bpm, downbeat, beats_per_bar as usize)
+}
+
+/// Browser entry point: fundamental in Hz of a short window, or 0 when nothing is heard.
+#[wasm_bindgen]
+pub fn pitch(samples: &[f32], sample_rate: f32) -> f32 {
+    analysis::detect_pitch(samples, sample_rate)
+}
+
 /// Browser entry point: `[bpm, firstBeatSeconds]`, zeros when no tempo is found.
 #[wasm_bindgen]
 pub fn tempo(samples: &[f32], sample_rate: f32) -> Vec<f32> {
@@ -430,6 +488,33 @@ mod stretch_tests {
         let x = sine(220.0, 44100.0, 0.1);
         assert_eq!(stretch(&x, 1.0, 2048, 512), x);
         assert!(stretch(&[], 0.5, 2048, 512).is_empty());
+    }
+
+    #[test]
+    fn resample_halves_length_and_doubles_pitch() {
+        let x = sine(220.0, 44100.0, 1.0);
+        let y = resample(&x, 2.0);
+        assert_eq!(y.len(), 22050);
+        let f_out = zero_crossings(&y) as f32 / (y.len() as f32 / 44100.0);
+        assert!((440.0 - f_out).abs() / 440.0 < 0.02, "{f_out}");
+        assert!(resample(&[], 2.0).is_empty());
+    }
+
+    #[test]
+    fn render_shifts_pitch_and_keeps_length() {
+        let x = sine(220.0, 44100.0, 1.0);
+        // Up a fifth (7 semitones) at full speed: same length, 329.6 Hz.
+        let y = render_channels(&[&x], 1.0, 7.0, 44100.0).remove(0);
+        assert!((y.len() as i64 - 44100).abs() < 200, "{}", y.len());
+        let f_out = zero_crossings(&y[2048..y.len() - 2048]) as f32 / ((y.len() - 4096) as f32 / 44100.0);
+        assert!((329.63 - f_out).abs() / 329.63 < 0.03, "{f_out}");
+        // Down an octave at half speed: twice the length, 110 Hz.
+        let z = render_channels(&[&x], 0.5, -12.0, 44100.0).remove(0);
+        assert!((z.len() as i64 - 88200).abs() < 400, "{}", z.len());
+        let f_z = zero_crossings(&z[2048..z.len() - 2048]) as f32 / ((z.len() - 4096) as f32 / 44100.0);
+        assert!((110.0 - f_z).abs() / 110.0 < 0.03, "{f_z}");
+        // Zero semitones is a plain stretch.
+        assert_eq!(render_channels(&[&x], 0.75, 0.0, 44100.0)[0], stretch_tuned(&x, 0.75, 44100.0));
     }
 
     #[test]

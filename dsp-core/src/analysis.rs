@@ -19,21 +19,26 @@ struct Stft {
     fft: Arc<dyn Fft<f32>>,
     win: Vec<f32>,
     padded: Vec<f32>,
+    frame: usize,
+    hop: usize,
 }
 
 impl Stft {
     fn new(x: &[f32]) -> Self {
-        let mut padded = vec![0.0; FRAME];
+        Self::with_frame(x, FRAME, HOP)
+    }
+    fn with_frame(x: &[f32], frame: usize, hop: usize) -> Self {
+        let mut padded = vec![0.0; frame];
         padded.extend_from_slice(x);
-        padded.extend(std::iter::repeat(0.0).take(FRAME * 2));
-        Stft { fft: FftPlanner::new().plan_fft_forward(FRAME), win: hann(FRAME), padded }
+        padded.extend(std::iter::repeat(0.0).take(frame * 2));
+        Stft { fft: FftPlanner::new().plan_fft_forward(frame), win: hann(frame), padded, frame, hop }
     }
     fn frames(&self) -> usize {
-        (self.padded.len() - FRAME) / HOP
+        (self.padded.len() - self.frame) / self.hop
     }
     fn spectrum(&self, t: usize) -> Vec<Complex<f32>> {
-        let mut buf: Vec<Complex<f32>> = (0..FRAME)
-            .map(|i| Complex::new(self.padded[t * HOP + i] * self.win[i], 0.0))
+        let mut buf: Vec<Complex<f32>> = (0..self.frame)
+            .map(|i| Complex::new(self.padded[t * self.hop + i] * self.win[i], 0.0))
             .collect();
         self.fft.process(&mut buf);
         buf
@@ -159,6 +164,115 @@ pub fn detect_key(x: &[f32], sample_rate: f32) -> i32 {
         }
     }
     best.0
+}
+
+/// Chroma (12 pitch classes, C first) of one stretch of samples, energy-summed over frames.
+fn chroma_of(x: &[f32], sample_rate: f32) -> [f32; 12] {
+    // A long frame (5 Hz bins at 44.1 kHz) so neighbouring semitones near the low E stay apart.
+    const CHROMA_FRAME: usize = 8192;
+    let stft = Stft::with_frame(x, CHROMA_FRAME, CHROMA_FRAME / 2);
+    let mut chroma = [0.0f32; 12];
+    for t in 0..stft.frames() {
+        let spec = stft.spectrum(t);
+        for b in 1..CHROMA_FRAME / 2 {
+            let f = b as f32 * sample_rate / CHROMA_FRAME as f32;
+            if !(65.0..2000.0).contains(&f) {
+                continue;
+            }
+            let pc = (12.0 * (f / 261.63).log2()).round().rem_euclid(12.0) as usize;
+            chroma[pc] += spec[b].norm_sqr();
+        }
+    }
+    chroma
+}
+
+/// One chord per bar, matched against major and minor triad templates on the bar's chroma:
+/// 0..11 C..B major, 12..23 C..B minor, -1 when the bar is too quiet to say.
+pub fn detect_chords(x: &[f32], sample_rate: f32, bpm: f32, downbeat: f32, beats_per_bar: usize) -> Vec<i32> {
+    if !(bpm > 0.0) || beats_per_bar == 0 || x.is_empty() {
+        return Vec::new();
+    }
+    let bar = (60.0 / bpm) * beats_per_bar as f32 * sample_rate;
+    let first = (downbeat * sample_rate).max(0.0);
+    let bars = ((x.len() as f32 - first) / bar).ceil().max(0.0) as usize;
+    let mut chromas: Vec<[f32; 12]> = Vec::with_capacity(bars);
+    for k in 0..bars {
+        let a = (first + k as f32 * bar) as usize;
+        let b = ((first + (k + 1) as f32 * bar) as usize).min(x.len());
+        chromas.push(if b > a { chroma_of(&x[a..b], sample_rate) } else { [0.0; 12] });
+    }
+    // A bar counts as pitched when it holds at least 5% of the loudest bar's energy.
+    let loudest = chromas.iter().map(|c| c.iter().sum::<f32>()).fold(0.0f32, f32::max);
+    chromas
+        .iter()
+        .map(|c| {
+            let total: f32 = c.iter().sum();
+            if total <= 1e-9 || total < loudest * 0.05 {
+                return -1;
+            }
+            let mut best = (-1, f32::MIN);
+            for root in 0..12 {
+                for (mode, third) in [(0, 4), (12, 3)] {
+                    let tri = [root, (root + third) % 12, (root + 7) % 12];
+                    let inside: f32 = tri.iter().map(|&p| c[p].sqrt()).sum();
+                    let outside: f32 = (0..12).filter(|p| !tri.contains(p)).map(|p| c[p].sqrt()).sum();
+                    let score = inside - outside * 0.5;
+                    if score > best.1 {
+                        best = (root as i32 + mode, score);
+                    }
+                }
+            }
+            best.0
+        })
+        .collect()
+}
+
+/// Fundamental frequency of a short window (YIN, 50..1200 Hz), or 0 when nothing periodic is heard.
+pub fn detect_pitch(x: &[f32], sample_rate: f32) -> f32 {
+    let n = x.len();
+    let max_tau = (sample_rate / 50.0) as usize;
+    let min_tau = (sample_rate / 1200.0).max(2.0) as usize;
+    if n < max_tau * 2 || max_tau <= min_tau {
+        return 0.0;
+    }
+    let rms = (x.iter().map(|v| v * v).sum::<f32>() / n as f32).sqrt();
+    if rms < 0.005 {
+        return 0.0;
+    }
+    let w = n - max_tau;
+    let mut d = vec![0.0f32; max_tau + 1];
+    for tau in 1..=max_tau {
+        let mut s = 0.0f32;
+        for i in 0..w {
+            let e = x[i] - x[i + tau];
+            s += e * e;
+        }
+        d[tau] = s;
+    }
+    // Cumulative mean normalised difference.
+    let mut cmnd = vec![1.0f32; max_tau + 1];
+    let mut run = 0.0f32;
+    for tau in 1..=max_tau {
+        run += d[tau];
+        cmnd[tau] = if run > 0.0 { d[tau] * tau as f32 / run } else { 1.0 };
+    }
+    let mut tau = min_tau;
+    let mut found = None;
+    while tau < max_tau {
+        if cmnd[tau] < 0.15 {
+            while tau + 1 < max_tau && cmnd[tau + 1] < cmnd[tau] {
+                tau += 1;
+            }
+            found = Some(tau);
+            break;
+        }
+        tau += 1;
+    }
+    let Some(t) = found else { return 0.0 };
+    let (a, b, c) = (cmnd[t - 1], cmnd[t], cmnd[t + 1]);
+    let denom = a - 2.0 * b + c;
+    let refined = t as f32 + if denom.abs() > 1e-12 { 0.5 * (a - c) / denom } else { 0.0 };
+    sample_rate / refined
 }
 
 fn median(v: &mut [f32]) -> f32 {
@@ -305,6 +419,43 @@ mod tests {
         assert_eq!(detect_key(&a_minor, SR), 12 + 9);
         let c_major = chord(&[(261.63, 0.3), (329.63, 0.2), (392.0, 0.25), (293.66, 0.06), (349.23, 0.08), (440.0, 0.06), (493.88, 0.04)]);
         assert_eq!(detect_key(&c_major, SR), 0);
+    }
+
+    #[test]
+    fn chords_per_bar_follow_a_progression() {
+        // Four bars at 120 BPM in 4/4 (2 s each): Am, C, G, Em.
+        let triads: [&[f32]; 4] = [&[220.0, 261.63, 329.63], &[261.63, 329.63, 392.0], &[196.0, 246.94, 293.66], &[164.81, 196.0, 246.94]];
+        let mut x = Vec::new();
+        for t in triads {
+            let mut bar = vec![0.0f32; (SR * 2.0) as usize];
+            for &f in t {
+                for (o, s) in bar.iter_mut().zip(tone(f, 2.0, 0.2)) {
+                    *o += s;
+                }
+            }
+            x.extend(bar);
+        }
+        assert_eq!(detect_chords(&x, SR, 120.0, 0.0, 4), vec![12 + 9, 0, 7, 12 + 4]);
+        // A silent bar reads as none, and a missing tempo gives nothing.
+        x.extend(vec![0.0f32; (SR * 2.0) as usize]);
+        assert_eq!(detect_chords(&x, SR, 120.0, 0.0, 4).last(), Some(&-1));
+        assert!(detect_chords(&x, SR, 0.0, 0.0, 4).is_empty());
+    }
+
+    #[test]
+    fn pitch_of_guitar_strings_and_silence() {
+        for f in [82.41, 110.0, 146.83, 196.0, 246.94, 329.63, 440.0] {
+            let mut x = tone(f, 0.1, 0.3);
+            // Add a couple of harmonics so it looks like a plucked string, not a sine.
+            for (i, v) in x.iter_mut().enumerate() {
+                let t = i as f32 / SR;
+                *v += 0.15 * (2.0 * std::f32::consts::PI * 2.0 * f * t).sin() + 0.08 * (2.0 * std::f32::consts::PI * 3.0 * f * t).sin();
+            }
+            let got = detect_pitch(&x[..4096], SR);
+            assert!((got - f).abs() / f < 0.01, "{f}: got {got}");
+        }
+        assert_eq!(detect_pitch(&vec![0.0; 4096], SR), 0.0);
+        assert_eq!(detect_pitch(&tone(440.0, 0.01, 0.3), SR), 0.0);
     }
 
     #[test]

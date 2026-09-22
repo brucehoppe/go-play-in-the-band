@@ -9,9 +9,10 @@ export type BandCommand =
   | { type: "seek"; frame: number }
   | { type: "loop"; start: number; end: number }
   | { type: "loopOff" }
-  | { type: "gain"; stem: number; level: number; muted: boolean };
+  | { type: "gain"; stem: number; level: number; muted: boolean }
+  | { type: "countIn"; beats: number; beatFrames: number };
 
-export type BandEvent = { type: "position"; frame: number; playing: boolean };
+export type BandEvent = { type: "position"; frame: number; playing: boolean; countingIn: boolean } | { type: "wrap"; wraps: number };
 
 interface WorkletPort {
   onmessage: ((e: MessageEvent<BandCommand>) => void) | null;
@@ -47,6 +48,7 @@ class BandProcessor extends AudioWorkletProcessor {
       else if (msg.type === "loop") this.transport.setLoop(msg.start, msg.end);
       else if (msg.type === "loopOff") this.transport.clearLoop();
       else if (msg.type === "gain") this.mixer.setTarget(msg.stem, msg.level, msg.muted);
+      else if (msg.type === "countIn") this.transport.countIn(msg.beats, msg.beatFrames);
       this.report();
     };
   }
@@ -54,12 +56,14 @@ class BandProcessor extends AudioWorkletProcessor {
   private report(): void {
     this.sinceReport = 0;
     this.lastPlaying = this.transport.playing;
-    this.port.postMessage({ type: "position", frame: this.transport.position, playing: this.transport.playing });
+    this.port.postMessage({ type: "position", frame: this.transport.position, playing: this.transport.playing, countingIn: this.transport.countingIn });
   }
 
   process(_inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
     const out = outputs[0];
-    this.transport.render(this.stems, out, this.mixer);
+    const wraps = this.transport.wraps;
+    this.transport.render(this.stems, out, this.mixer, sampleRate);
+    if (this.transport.wraps !== wraps) this.port.postMessage({ type: "wrap", wraps: this.transport.wraps });
     this.sinceReport += out[0].length;
     if (this.sinceReport >= REPORT_EVERY || this.transport.playing !== this.lastPlaying) this.report();
     return true;

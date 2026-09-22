@@ -1,6 +1,6 @@
 import bandWorkletUrl from "./band.worklet.ts?worker&url";
 import { measureLatency } from "./take";
-import { DEFAULT_CHOICE } from "../lib/devices";
+import { DEFAULT_CHOICE, inputConstraints } from "../lib/devices";
 import type { AudioChoice } from "../lib/devices";
 import { Recorder } from "./recorder";
 import { stretchChannels } from "./stretch";
@@ -13,13 +13,20 @@ export class Engine {
 
   private source: Stem[] = [];
   private speed = 1;
+  private semitones = 0;
   private gains: { level: number; muted: boolean }[] = [];
   private loopSec: [number, number] | null = null;
   private lastFrame = 0;
   private playing = false;
+  /** One rendering made ahead of time (progressive tempo), swapped in without waiting. */
+  private prepared: { speed: number; semitones: number; stems: Stem[]; source: Stem[] } | null = null;
+  private preparing: Promise<void> | null = null;
+  private monitorNodes: { stream: MediaStream; source: MediaStreamAudioSourceNode; gain: GainNode } | null = null;
 
   /** Position is always reported in source-song seconds, whatever the speed. */
-  onPosition: (seconds: number, playing: boolean) => void = () => {};
+  onPosition: (seconds: number, playing: boolean, countingIn: boolean) => void = () => {};
+  /** The loop wrapped: `wraps` passes since the loop was set. */
+  onWrap: (wraps: number) => void = () => {};
 
   get sampleRate(): number {
     return this.ctx.sampleRate;
@@ -31,9 +38,13 @@ export class Engine {
     const node = new AudioWorkletNode(this.ctx, "band-processor", { outputChannelCount: [2] });
     node.connect(this.ctx.destination);
     node.port.onmessage = (e: MessageEvent<BandEvent>) => {
+      if (e.data.type === "wrap") {
+        this.onWrap(e.data.wraps);
+        return;
+      }
       this.lastFrame = e.data.frame;
       this.playing = e.data.playing;
-      this.onPosition((e.data.frame / this.ctx.sampleRate) * this.speed, e.data.playing);
+      this.onPosition((e.data.frame / this.ctx.sampleRate) * this.speed, e.data.playing, e.data.countingIn);
     };
     this.node = node;
   }
@@ -53,6 +64,8 @@ export class Engine {
   load(stems: Stem[]): void {
     this.source = stems;
     this.speed = 1;
+    this.semitones = 0;
+    this.prepared = null;
     this.gains = stems.map(() => ({ level: 1, muted: false }));
     this.post(stems);
   }
@@ -60,24 +73,70 @@ export class Engine {
   /** Re-render every stem at `speed` (0.25..1.25) and swap it in, keeping position, loop, gains and play state. */
   async setSpeed(speed: number): Promise<void> {
     if (speed === this.speed || this.source.length === 0) return;
-    await this.render(speed);
+    await this.render(speed, this.semitones);
+  }
+
+  /** Re-render every stem `semitones` higher (or lower) at the same speed. */
+  async setTranspose(semitones: number): Promise<void> {
+    if (semitones === this.semitones || this.source.length === 0) return;
+    await this.render(this.speed, semitones);
+  }
+
+  get transpose(): number {
+    return this.semitones;
+  }
+
+  /** Render `speed` in the background so the next `setSpeed(speed)` swaps it in at once. */
+  prepare(speed: number): Promise<void> {
+    if (this.source.length === 0 || speed === this.speed) return Promise.resolve();
+    if (this.prepared?.speed === speed && this.prepared.semitones === this.semitones && this.prepared.source === this.source) return Promise.resolve();
+    const source = this.source;
+    const semitones = this.semitones;
+    this.preparing = this.renderStems(source, speed, semitones)
+      .then((stems) => {
+        if (this.source === source) this.prepared = { speed, semitones, stems, source };
+      })
+      .catch(() => {})
+      .finally(() => {
+        this.preparing = null;
+      });
+    return this.preparing;
   }
 
   /** Add a part (an overdub take) on top of what is loaded, keeping position, loop, gains and speed. */
   async addStem(stem: Stem): Promise<void> {
     this.source = [...this.source, stem];
     this.gains.push({ level: 1, muted: false });
-    await this.render(this.speed);
+    await this.render(this.speed, this.semitones);
   }
 
-  private async render(speed: number): Promise<void> {
+  /** Drop a part by index, keeping everything else. */
+  async removeStem(index: number): Promise<void> {
+    if (index < 0 || index >= this.source.length) return;
+    this.source = this.source.filter((_, k) => k !== index);
+    this.gains.splice(index, 1);
+    await this.render(this.speed, this.semitones);
+  }
+
+  private renderStems(source: Stem[], speed: number, semitones: number): Promise<Stem[]> {
+    return Promise.all(
+      source.map(async (s) => ({ name: s.name, channels: await stretchChannels(s.channels, speed, this.ctx.sampleRate, semitones) })),
+    );
+  }
+
+  private async render(speed: number, semitones: number): Promise<void> {
     const wasPlaying = this.playing;
     const at = (this.lastFrame / this.ctx.sampleRate) * this.speed;
+    if (this.preparing) await this.preparing;
+    const ready = this.prepared;
+    const stretched =
+      ready && ready.speed === speed && ready.semitones === semitones && ready.source === this.source
+        ? ready.stems
+        : await this.renderStems(this.source, speed, semitones);
+    this.prepared = null;
     this.pause();
-    const stretched = await Promise.all(
-      this.source.map(async (s) => ({ name: s.name, channels: await stretchChannels(s.channels, speed, this.ctx.sampleRate) })),
-    );
     this.speed = speed;
+    this.semitones = semitones;
     this.post(stretched);
     this.gains.forEach((g, i) => this.send({ type: "gain", stem: i, level: g.level, muted: g.muted }));
     if (this.loopSec) this.setLoop(...this.loopSec);
@@ -137,6 +196,73 @@ export class Engine {
   async play(): Promise<void> {
     await this.ctx.resume();
     this.send({ type: "play" });
+  }
+
+  /** Play after `beats` ticks at the song's tempo (heard at the current speed). */
+  async playWithCountIn(beats: number, bpm: number): Promise<void> {
+    const beatFrames = Math.round(((60 / bpm) * this.ctx.sampleRate) / this.speed);
+    this.send({ type: "countIn", beats, beatFrames });
+    await this.play();
+  }
+
+  /** Hear the chosen input through the output (software monitoring). Use headphones. */
+  async monitor(on: boolean, level = 0.8): Promise<void> {
+    if (!on) {
+      const m = this.monitorNodes;
+      if (!m) return;
+      m.source.disconnect();
+      m.gain.disconnect();
+      m.stream.getTracks().forEach((t) => t.stop());
+      this.monitorNodes = null;
+      return;
+    }
+    if (this.monitorNodes) {
+      this.monitorNodes.gain.gain.value = level;
+      return;
+    }
+    await this.ctx.resume();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: inputConstraints(this.choice) });
+    const source = this.ctx.createMediaStreamSource(stream);
+    const gain = this.ctx.createGain();
+    gain.gain.value = level;
+    source.connect(gain).connect(this.ctx.destination);
+    this.monitorNodes = { stream, source, gain };
+  }
+
+  get monitoring(): boolean {
+    return this.monitorNodes !== null;
+  }
+
+  /** The browser's own input-to-output delay in milliseconds, as far as it reports it. */
+  get reportedLatencyMs(): number {
+    const ctx = this.ctx as AudioContext & { outputLatency?: number };
+    return Math.round(((ctx.baseLatency ?? 0) + (ctx.outputLatency ?? 0)) * 1000);
+  }
+
+  /** A short reference tone, e.g. for tuning. Returns a function that stops it. */
+  tone(hz: number, seconds = 2): () => void {
+    const osc = this.ctx.createOscillator();
+    const env = this.ctx.createGain();
+    const now = this.ctx.currentTime;
+    osc.type = "triangle";
+    osc.frequency.value = hz;
+    env.gain.setValueAtTime(0.25, now);
+    env.gain.setTargetAtTime(0, now + seconds - 0.2, 0.05);
+    osc.connect(env).connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + seconds);
+    return () => {
+      try {
+        osc.stop();
+      } catch {
+        /* already stopped */
+      }
+    };
+  }
+
+  /** The raw AudioContext, for panels that build their own small graphs (the tuner). */
+  get context(): AudioContext {
+    return this.ctx;
   }
 
   pause(): void {

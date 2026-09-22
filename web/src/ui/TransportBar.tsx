@@ -5,6 +5,8 @@ interface Props {
   position: number;
   duration: number;
   playing: boolean;
+  /** The count-in ticks are playing; the song starts after them. */
+  countingIn: boolean;
   disabled: boolean;
   /** Record works with nothing loaded: the first take becomes the song. */
   canRecord: boolean;
@@ -19,12 +21,13 @@ interface Props {
   hasTake: boolean;
   onRecord: () => void;
   onExport: () => void;
+  onExportParts: () => void;
   onCalibrate: () => void;
 }
 
 const SPEEDS = [0.25, 0.5, 0.75, 1];
 
-export function TransportBar({ position, duration, playing, disabled, canRecord, onToggle, onRewind, speed, preparing, onSpeed, bpm, recording, hasTake, onRecord, onExport, onCalibrate }: Props) {
+export function TransportBar({ position, duration, playing, countingIn, disabled, canRecord, onToggle, onRewind, speed, preparing, onSpeed, bpm, recording, hasTake, onRecord, onExport, onExportParts, onCalibrate }: Props) {
   // The slider moves freely; the audio is re-rendered once, when you let go.
   const [drag, setDrag] = useState(Math.round(speed * 100));
   useEffect(() => setDrag(Math.round(speed * 100)), [speed]);
@@ -33,6 +36,7 @@ export function TransportBar({ position, duration, playing, disabled, canRecord,
     <footer className="transport">
       <div className="time" aria-live="off">
         {formatTime(position)} / {formatTime(duration)}
+        {countingIn && <span className="count-in-tag"> count-in</span>}
       </div>
       <button disabled={disabled} onClick={onRewind} aria-label="Back to start">⏮</button>
       <button className="play" disabled={disabled} onClick={onToggle} aria-label={playing ? "Pause" : "Play"}>
@@ -42,7 +46,8 @@ export function TransportBar({ position, duration, playing, disabled, canRecord,
         {recording ? "■ Stop take" : "● Record"}
       </button>
       <button disabled={disabled || recording} onClick={onCalibrate}>Calibrate</button>
-      <button disabled={!hasTake || recording} onClick={onExport}>Export mix</button>
+      <button disabled={!hasTake || recording} onClick={onExport} title="What you hear, as one WAV">Export mix</button>
+      <button disabled={!hasTake || recording} onClick={onExportParts} title="One WAV per part, in a zip">Export parts</button>
       <div className="speeds" role="group" aria-label="Slow down or speed up">
         <span className="speeds-label">Slow down</span>
         {SPEEDS.map((v) => (

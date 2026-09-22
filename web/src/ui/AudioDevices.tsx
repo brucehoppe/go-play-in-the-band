@@ -8,10 +8,17 @@ interface Props {
   onChange: (c: AudioChoice) => void;
   /** Ask for the input once so the browser will show device names. */
   onAllow: () => Promise<void>;
+  /** Hear the input through the output. */
+  monitoring: boolean;
+  onMonitor: (on: boolean) => void;
+  /** The browser's reported input-to-output delay, ms; null before the audio starts. */
+  reportedLatencyMs: number | null;
+  /** The measured round trip from Calibrate, ms; null when not calibrated. */
+  calibratedMs: number | null;
 }
 
 /** Pick the input (a microphone or a USB audio interface and which of its inputs) and the output (e.g. a USB headphone amp). */
-export function AudioDevices({ choice, canPickOutput, disabled, onChange, onAllow }: Props) {
+export function AudioDevices({ choice, canPickOutput, disabled, onChange, onAllow, monitoring, onMonitor, reportedLatencyMs, calibratedMs }: Props) {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const refresh = () =>
     navigator.mediaDevices
@@ -61,9 +68,18 @@ export function AudioDevices({ choice, canPickOutput, disabled, onChange, onAllo
         )}
         {!named && <button disabled={disabled} onClick={() => void onAllow().then(refresh)}>Show device names</button>}
       </div>
+      <div className="tools-row">
+        <button className="toggle" aria-pressed={monitoring} disabled={disabled} onClick={() => onMonitor(!monitoring)} title="Hear your input through the app. Use headphones, or it will feed back.">
+          Monitor {monitoring ? "on" : "off"}
+        </button>
+        <span className="mono hint">
+          delay {reportedLatencyMs === null ? "–" : `${reportedLatencyMs} ms`}
+          {calibratedMs !== null ? ` · round trip ${calibratedMs} ms` : ""}
+        </span>
+      </div>
       <p className="hint">
-        With an audio interface, pick the input your guitar is plugged into, and use the interface's own direct monitoring to hear
-        yourself without delay. Calibrate again after changing devices.
+        With an audio interface, pick the input your guitar is plugged into. The interface's own direct monitoring has no delay;
+        Monitor here goes through the browser and adds the delay shown. Use headphones. Calibrate again after changing devices.
       </p>
     </section>
   );

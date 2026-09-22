@@ -104,9 +104,15 @@ export class Engine {
   }
 
   /** Add a part (an overdub take) on top of what is loaded, keeping position, loop, gains and speed. */
-  async addStem(stem: Stem): Promise<void> {
-    this.source = [...this.source, stem];
-    this.gains.push({ level: 1, muted: false });
+  addStem(stem: Stem): Promise<void> {
+    return this.addStems([stem]);
+  }
+
+  /** Add several parts at once (the passes of a looped take), with one re-render. */
+  async addStems(stems: Stem[]): Promise<void> {
+    if (stems.length === 0) return;
+    this.source = [...this.source, ...stems];
+    for (const _ of stems) this.gains.push({ level: 1, muted: false });
     await this.render(this.speed, this.semitones);
   }
 

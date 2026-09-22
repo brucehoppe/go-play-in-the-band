@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { computePeaks } from "../audio/peaks";
+import type { SavedLoop } from "../data/loops";
+import { chordName } from "../lib/chords";
 import { barSeconds, gridLines } from "../lib/grid";
 import { loopName, moveHandle } from "../lib/loop";
 import type { LoopRange } from "../lib/loop";
+import { cleanProgressive } from "../lib/progressive";
+import type { Progressive } from "../lib/progressive";
 import { formatTime } from "../lib/time";
 import { useWaveCanvas } from "./useWaveCanvas";
 
@@ -26,6 +30,20 @@ interface Props {
   onSetIn: () => void;
   onSetOut: () => void;
   onSnap: () => void;
+  /** Loops saved for this song. */
+  savedLoops: SavedLoop[];
+  onSaveLoop: (name: string) => void;
+  onDeleteLoop: (name: string) => void;
+  onPickLoop: (loop: SavedLoop) => void;
+  /** One bar of clicks before play starts. */
+  countIn: boolean;
+  onCountIn: (on: boolean) => void;
+  progressive: Progressive;
+  onProgressive: (p: Progressive) => void;
+  /** Complete passes of the loop since it was set. */
+  passes: number;
+  /** Chord index per bar of the song (see `chordName`), or null. */
+  chords: Int32Array | null;
 }
 
 const PAD = 1; // seconds of context shown each side of the loop
@@ -45,6 +63,8 @@ export function LoopPanel(p: Props) {
   const { duration, loop } = p;
   const tempo = p.bpm && p.beatsPerBar ? { bpm: p.bpm, bpb: p.beatsPerBar } : null;
   const [zoom, setZoom] = useState<Zoom | null>(null);
+  const [saveName, setSaveName] = useState("");
+  const [saving, setSaving] = useState(false);
   const { box, canvas } = useWaveCanvas(zoom?.peaks ?? null, { peaks: zoom?.guitar ?? null, scale: p.guitarLevel });
   const dragging = useRef(false);
   const latest = useRef<LoopRange | null>(loop);
@@ -101,6 +121,16 @@ export function LoopPanel(p: Props) {
   const snapReason = tempo ? null : "Snap needs a known tempo";
   const bar = tempo ? barSeconds(tempo.bpm, tempo.bpb) : 0;
   void bar;
+  const chordAt = (barNo: number | null) => (barNo !== null && p.chords && barNo - 1 < p.chords.length ? chordName(p.chords[barNo - 1]) : null);
+
+  const prog = p.progressive;
+  const setProg = (patch: Partial<Progressive>) => p.onProgressive(cleanProgressive({ ...prog, ...patch }));
+  const commitSave = () => {
+    const name = saveName.trim();
+    if (name) p.onSaveLoop(name);
+    setSaveName("");
+    setSaving(false);
+  };
 
   function handle(which: "in" | "out") {
     const value = loop ? (which === "in" ? loop.start : loop.end) : 0;
@@ -154,6 +184,7 @@ export function LoopPanel(p: Props) {
     <section className="panel loop-panel" aria-label="Loop">
       <div className="loop-head">
         <h2>{loop ? loopName(loop, p.bpm, p.beatsPerBar) : "Loop"}</h2>
+        {p.looping && p.passes > 0 && <span className="mono hint">pass {p.passes + 1}</span>}
         <button className="toggle" aria-pressed={p.looping} disabled={!loop} onClick={p.onToggle}>
           Looping {p.looping ? "on" : "off"}
         </button>
@@ -176,7 +207,50 @@ export function LoopPanel(p: Props) {
             {snapReason}
           </span>
         )}
+        {loop && !saving && (
+          <button onClick={() => setSaving(true)} title="Keep this loop under a name, so you can come back to it">
+            Save loop
+          </button>
+        )}
+        {loop && saving && (
+          <span className="save-loop">
+            <input
+              autoFocus
+              aria-label="Loop name"
+              placeholder="Name, e.g. Solo"
+              maxLength={40}
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitSave();
+                else if (e.key === "Escape") setSaving(false);
+              }}
+            />
+            <button onClick={commitSave} disabled={!saveName.trim()}>
+              Save
+            </button>
+            <button onClick={() => setSaving(false)}>Cancel</button>
+          </span>
+        )}
+        <label className="toggle-line">
+          <input type="checkbox" checked={p.countIn} disabled={!tempo} onChange={(e) => p.onCountIn(e.target.checked)} />
+          Count-in{tempo ? "" : " (needs a tempo)"}
+        </label>
       </div>
+      {p.savedLoops.length > 0 && (
+        <div className="chips saved" role="group" aria-label="Saved loops">
+          {p.savedLoops.map((l) => (
+            <span key={l.name} className="chip-wrap">
+              <button className="chip" onClick={() => p.onPickLoop(l)} aria-label={`Loop ${l.name}`} title={`${formatTime(l.start)} to ${formatTime(l.end)}`}>
+                {l.name}
+              </button>
+              <button className="chip-x" aria-label={`Delete loop ${l.name}`} onClick={() => p.onDeleteLoop(l.name)}>
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       {loop && (
         <div ref={box} className="zoom" role="group" aria-label="Loop waveform">
           <canvas ref={canvas} />
@@ -185,6 +259,7 @@ export function LoopPanel(p: Props) {
           {lines.map((l) => (
             <div key={l.sec} className={l.bar !== null ? "gl bar" : "gl"} style={{ left: `${pct(l.sec)}%` }}>
               {l.bar !== null && <span className="gl-num">{l.bar}</span>}
+              {chordAt(l.bar) && <span className="gl-chord">{chordAt(l.bar)}</span>}
             </div>
           ))}
           {inView(p.position) && <div className="playhead" style={{ left: `${pct(p.position)}%` }} />}
@@ -202,10 +277,39 @@ export function LoopPanel(p: Props) {
           )}
         </p>
       )}
+      {loop && (
+        <details className="progressive" open={prog.on}>
+          <summary>
+            Progressive tempo{prog.on ? `: ${prog.from}% → ${prog.to}%, +${prog.step}% every ${prog.every} pass${prog.every === 1 ? "" : "es"}` : ""}
+          </summary>
+          <div className="tools-row">
+            <label className="toggle-line">
+              <input type="checkbox" aria-label="Progressive tempo on" checked={prog.on} disabled={!p.looping} onChange={(e) => setProg({ on: e.target.checked })} />
+              On{p.looping ? "" : " (turn looping on first)"}
+            </label>
+            <label>
+              Start %
+              <input inputMode="numeric" aria-label="Start %" value={prog.from} onChange={(e) => setProg({ from: Number(e.target.value) })} />
+            </label>
+            <label>
+              Step %
+              <input inputMode="numeric" aria-label="Step %" value={prog.step} onChange={(e) => setProg({ step: Number(e.target.value) })} />
+            </label>
+            <label>
+              Every N passes
+              <input inputMode="numeric" aria-label="Every N passes" value={prog.every} onChange={(e) => setProg({ every: Number(e.target.value) })} />
+            </label>
+            <label>
+              Up to %
+              <input inputMode="numeric" aria-label="Up to %" value={prog.to} onChange={(e) => setProg({ to: Number(e.target.value) })} />
+            </label>
+          </div>
+          <p className="hint">Start slow, and every N passes of the loop the speed goes up a step. It stops at the top.</p>
+        </details>
+      )}
       <p className="sr-only" role="status" aria-live="polite">
         {p.status}
       </p>
     </section>
   );
 }
-

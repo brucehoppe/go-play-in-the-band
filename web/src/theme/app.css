@@ -115,3 +115,42 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .tempo-slider { display: grid; gap: 2px; font-size: 0.8rem; min-width: 160px; flex: 0 1 220px; }
 .tempo-slider input { width: 100%; accent-color: var(--amber); }
 .speeds-label { font-size: 0.8rem; color: var(--text-2); margin-right: 2px; }
+
+/* Practice tools */
+.toggle-line { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 0.9rem; cursor: pointer; }
+.toggle-line input { width: 18px; height: 18px; accent-color: var(--amber); }
+.save-loop { display: inline-flex; gap: 8px; align-items: center; }
+.save-loop input { min-height: 44px; padding: 0 10px; width: 12rem; background: transparent; color: inherit; border: 1px solid var(--border); border-radius: 8px; font: inherit; }
+.chips.saved { flex-wrap: wrap; margin-bottom: 12px; }
+.chip-wrap { display: inline-flex; flex: 0 1 auto; }
+.chip-wrap .chip { flex: 0 1 auto; border-radius: 8px 0 0 8px; }
+.chip-x { min-width: 32px; padding: 0 8px; border-radius: 0 8px 8px 0; border-left: none; color: var(--text-2); font-family: var(--font-mono); }
+.chip-x:hover:not(:disabled) { color: var(--red-2); border-color: var(--red-2); }
+.gl-chord { position: absolute; bottom: 2px; left: 4px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--teal); font-weight: 600; }
+.chord-strip { position: relative; height: 22px; margin-top: 4px; }
+.chord-strip .chord {
+  position: absolute; top: 0; height: 22px; line-height: 22px; overflow: hidden; white-space: nowrap; text-overflow: clip;
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--teal); border-left: 1px solid var(--border); padding-left: 4px; box-sizing: border-box;
+}
+.progressive { margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+.progressive summary { cursor: pointer; color: var(--text-2); font-size: 0.9rem; min-height: 28px; line-height: 28px; }
+.progressive .tools-row input { width: 5rem; }
+.recent h3 { font-size: 0.9rem; color: var(--text-2); margin: 16px 0 8px; font-family: var(--font-ui); }
+.recent ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.recent li { display: flex; align-items: center; gap: 12px; }
+.recent .link { background: none; border: none; padding: 0 4px; color: var(--amber); text-decoration: underline; min-height: 36px; }
+.recent .chip-x { border-radius: 8px; border-left: 1px solid var(--border); margin-left: auto; min-height: 36px; }
+.take-actions { display: flex; gap: 8px; margin-top: 4px; }
+.take-actions button { min-height: 36px; padding: 0 10px; font-size: 0.85rem; }
+.take-actions .danger:hover:not(:disabled) { border-color: var(--red-2); color: var(--red-2); }
+.stem.take { border-left: 3px solid var(--amber); padding-left: 8px; }
+.tuner-read { display: flex; flex-direction: column; margin-left: 8px; }
+.tuner-note { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; line-height: 1.1; }
+.tuner-note.in-tune { color: var(--teal); }
+.needle-track { position: relative; height: 12px; margin: 8px 0; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+.needle-centre { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--text-2); }
+.needle { position: absolute; top: -4px; bottom: -4px; width: 4px; margin-left: -2px; background: var(--amber); border-radius: 2px; transition: left 0.1s linear; }
+.needle.in-tune { background: var(--teal); }
+.count-in-tag { color: var(--amber); font-size: 0.8rem; margin-left: 8px; }
+.demo-pick select { min-height: 44px; padding: 0 12px; background: var(--raised); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font: inherit; cursor: pointer; }
+.demo-pick select:hover { border-color: var(--amber); }

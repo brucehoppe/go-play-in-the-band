@@ -3,7 +3,11 @@ import { keyName } from "../lib/songtools";
 let worker: Worker | null = null;
 let nextId = 0;
 
-function run<T>(job: { kind: "analyse" | "split"; mono: Float32Array; sampleRate: number }): Promise<T> {
+type Job =
+  | { kind: "analyse" | "split" | "pitch"; mono: Float32Array; sampleRate: number }
+  | { kind: "chords"; mono: Float32Array; sampleRate: number; bpm: number; downbeat: number; beatsPerBar: number };
+
+function run<T>(job: Job): Promise<T> {
   worker ??= new Worker(new URL("./analysis.worker.ts", import.meta.url), { type: "module" });
   const w = worker;
   const id = nextId++;
@@ -40,4 +44,14 @@ export const QUICK_PARTS = ["Percussive (drums)", "Bass (low)", "Harmonic (guita
 /** Quick split of a mono mix into `QUICK_PARTS`. The parts add back up to the input. */
 export async function quickSplit(mono: Float32Array, sampleRate: number): Promise<Float32Array[]> {
   return (await run<{ parts: Float32Array[] }>({ kind: "split", mono, sampleRate })).parts;
+}
+
+/** One chord index per bar (see `chordName`), from the song's tempo grid. */
+export async function chordsFor(mono: Float32Array, sampleRate: number, bpm: number, downbeat: number, beatsPerBar: number): Promise<Int32Array> {
+  return (await run<{ chords: Int32Array }>({ kind: "chords", mono, sampleRate, bpm, downbeat, beatsPerBar })).chords;
+}
+
+/** Fundamental of a short window in Hz, or 0. */
+export async function pitchOf(window: Float32Array, sampleRate: number): Promise<number> {
+  return (await run<{ hz: number }>({ kind: "pitch", mono: window, sampleRate })).hz;
 }

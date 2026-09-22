@@ -1,4 +1,5 @@
 import { GUITAR_PRESETS, guitarHint, stemLabel } from "../lib/band";
+import { isTake } from "../lib/takes";
 
 interface Props {
   /** Stem names in engine order. */
@@ -17,6 +18,9 @@ interface Props {
   onQuickSplit?: () => void;
   onStemSplit?: () => void;
   busy?: boolean;
+  /** Hear only this take among the takes (the band still plays). */
+  onOnlyTake: (stem: number) => void;
+  onDeleteTake: (stem: number) => void;
 }
 
 function Slider({
@@ -52,7 +56,8 @@ export function BandMixer({
   muted,
   guitar,
   onLevel,
-  onMute, onQuickSplit, onStemSplit, busy, solo, onSolo }: Props) {
+  onMute, onQuickSplit, onStemSplit, busy, solo, onSolo, onOnlyTake, onDeleteTake }: Props) {
+  const takeCount = names.filter(isTake).length;
   return (
     <aside className="panel band-panel" aria-label="The band">
       <h2>The band</h2>
@@ -113,7 +118,7 @@ export function BandMixer({
       <ul className="stems">
         {names.map((name, i) =>
           i === guitar ? null : (
-            <li key={name} className="stem">
+            <li key={name} className={isTake(name) ? "stem take" : "stem"}>
               <div className="stem-row">
                 <label htmlFor={`stem-${i}`}>{stemLabel(name)}</label>
                 <output className="mono readout" htmlFor={`stem-${i}`}>
@@ -143,6 +148,18 @@ export function BandMixer({
                 value={levels[i]}
                 onChange={(v) => onLevel(i, v)}
               />
+              {isTake(name) && (
+                <div className="take-actions">
+                  {takeCount > 1 && (
+                    <button disabled={busy} onClick={() => onOnlyTake(i)} title="Hear this take with the band and mute the other takes, to compare">
+                      Only this take
+                    </button>
+                  )}
+                  <button disabled={busy} className="danger" onClick={() => onDeleteTake(i)} aria-label={`Delete ${name}`}>
+                    Delete
+                  </button>
+                </div>
+              )}
             </li>
           ),
         )}

@@ -71,3 +71,36 @@ export function mixParts(parts: Float32Array[], levels: number[]): Float32Array 
   for (let i = 0; i < out.length; i++) out[i] = Math.max(-1, Math.min(1, out[i] * MIX_HEADROOM));
   return out;
 }
+
+/** Decode a 16-bit PCM WAV written by `encodeWav` (mono; extra channels are averaged). Returns the sample rate too. */
+export function decodeWav(bytes: Uint8Array): { samples: Float32Array; sampleRate: number } {
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const tag = (o: number) => String.fromCharCode(bytes[o], bytes[o + 1], bytes[o + 2], bytes[o + 3]);
+  if (bytes.length < 44 || tag(0) !== "RIFF" || tag(8) !== "WAVE") throw new Error("Not a WAV file.");
+  let p = 12;
+  let channels = 1;
+  let sampleRate = 48000;
+  let bits = 16;
+  while (p + 8 <= bytes.length) {
+    const id = tag(p);
+    const size = v.getUint32(p + 4, true);
+    if (id === "fmt ") {
+      if (v.getUint16(p + 8, true) !== 1) throw new Error("Only PCM WAV files are supported.");
+      channels = v.getUint16(p + 10, true);
+      sampleRate = v.getUint32(p + 12, true);
+      bits = v.getUint16(p + 22, true);
+    } else if (id === "data") {
+      if (bits !== 16) throw new Error("Only 16-bit WAV files are supported.");
+      const frames = Math.floor(Math.min(size, bytes.length - p - 8) / (2 * channels));
+      const samples = new Float32Array(frames);
+      for (let i = 0; i < frames; i++) {
+        let acc = 0;
+        for (let c = 0; c < channels; c++) acc += v.getInt16(p + 8 + (i * channels + c) * 2, true) / 32767;
+        samples[i] = acc / channels;
+      }
+      return { samples, sampleRate };
+    }
+    p += 8 + size + (size & 1);
+  }
+  throw new Error("WAV file has no data.");
+}

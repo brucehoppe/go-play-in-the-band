@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEMO_INFO, DEMO_SECTIONS, synthDemo, synthDemoStems } from "./demo";
+import { DEMO_INFO, DEMO_SECTIONS, DEMO_SONGS, demoSections, synthDemo, synthDemoStems } from "./demo";
 
 describe("synthDemo", () => {
   const sr = 8000;
@@ -80,5 +80,28 @@ describe("synthDemoStems", () => {
       const sum = stems.reduce((t, s) => t + s.channels[0][i], 0);
       expect(mix[0][i]).toBeCloseTo(sum, 5);
     }
+  });
+});
+
+describe("second demo (E waltz)", () => {
+  const sr = 8000;
+  const waltz = DEMO_SONGS[1];
+  const stems = synthDemoStems(sr, 4, waltz);
+
+  it("is in 3/4 at 90 bpm and sections cover it", () => {
+    expect(waltz.timeSig).toBe("3/4");
+    const len = Math.floor(4 * 3 * (60 / 90) * sr);
+    for (const s of stems) expect(s.channels[0].length).toBe(len);
+    const secs = demoSections(waltz);
+    expect(secs[3].end).toBeCloseTo(16 * 3 * (60 / 90), 9);
+  });
+
+  it("differs from the first demo and stays within peak 1", () => {
+    const first = synthDemoStems(sr, 4);
+    expect(Array.from(stems[0].channels[0].slice(100, 400))).not.toEqual(Array.from(first[0].channels[0].slice(100, 400)));
+    const n = stems[0].channels[0].length;
+    let peak = 0;
+    for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(stems.reduce((t, s) => t + s.channels[0][i], 0)));
+    expect(peak).toBeLessThanOrEqual(1);
   });
 });
